@@ -9,14 +9,14 @@
   </head>
   <body>
     <div id="app" class="app-shell">
-      <div class="window-bar" aria-hidden="true">
-        <div class="window-lights"><i></i><i></i><i></i></div>
+      <div class="window-bar">
+        <div class="window-lights" aria-hidden="true"><i></i><i></i><i></i></div>
         <button class="window-sidebar" title="Toggle sidebar">▣</button>
-        <button class="window-history" title="Recently viewed">◷</button>
-        <button class="window-arrow" title="Back">‹</button>
-        <button class="window-arrow" title="Forward">›</button>
+        <button class="window-history" aria-label="Recently viewed unavailable" disabled title="Recently viewed unavailable">◷</button>
+        <button class="window-arrow" aria-label="Back unavailable" disabled title="Back unavailable">‹</button>
+        <button class="window-arrow" aria-label="Forward unavailable" disabled title="Forward unavailable">›</button>
         <div class="window-tab"><span id="tab-mark">◉</span><span id="tab-title">Issues</span></div>
-        <button class="window-plus" title="Open new tab">+</button>
+        <button class="window-plus" aria-label="Open new tab unavailable" disabled title="Open new tab unavailable">+</button>
       </div>
       <div class="workspace-shell">
         <aside class="sidebar" id="sidebar">
@@ -31,35 +31,35 @@
           </div>
           <nav class="sidebar-nav" aria-label="Main navigation">
             <div class="primary-links">
-              <button class="nav-item" data-page="Inbox"><svg viewBox="0 0 24 24"><path d="M4 5.5h16l1 10.8a2 2 0 0 1-2 2.2h-4.3l-2.7-3h-2l-2.7 3H3a2 2 0 0 1-2-2.2l1-10.8h2Z"/><path d="M3 14h4l2 2h6l2-2h4"/></svg><span>Inbox</span><span class="nav-count">3</span></button>
-              <button class="nav-item" data-page="My issues"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.4 2"/><path d="M4 4 2.5 2.5M20 4l1.5-1.5"/></svg><span>My issues</span></button>
+              <button class="nav-item" aria-label="Inbox" data-page="Inbox"><svg viewBox="0 0 24 24"><path d="M4 5.5h16l1 10.8a2 2 0 0 1-2 2.2h-4.3l-2.7-3h-2l-2.7 3H3a2 2 0 0 1-2-2.2l1-10.8h2Z"/><path d="M3 14h4l2 2h6l2-2h4"/></svg><span>Inbox</span><span class="nav-count">3</span></button>
+              <button class="nav-item" aria-label="My issues" data-page="My issues"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.4 2"/><path d="M4 4 2.5 2.5M20 4l1.5-1.5"/></svg><span>My issues</span></button>
             </div>
             <div class="nav-section"><button class="section-label"><span>Workspace</span><span>⌄</span></button>
-              <button class="nav-item" data-page="Projects"><svg viewBox="0 0 24 24"><path d="m12 2.8 9 5.1v8.2l-9 5.1-9-5.1V7.9l9-5.1Z"/><path d="m3.5 8.2 8.5 5 8.5-5M12 13.2v7.5"/></svg><span>Projects</span></button>
-              <button class="nav-item" data-page="Views"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg><span>Views</span></button>
-              <button class="nav-item" data-page="More"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>More</span></button>
+              <button class="nav-item" aria-label="Projects" data-page="Projects"><svg viewBox="0 0 24 24"><path d="m12 2.8 9 5.1v8.2l-9 5.1-9-5.1V7.9l9-5.1Z"/><path d="m3.5 8.2 8.5 5 8.5-5M12 13.2v7.5"/></svg><span>Projects</span></button>
+              <button class="nav-item" aria-label="Views" data-page="Views"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg><span>Views</span></button>
+              <button class="nav-item" aria-label="More" data-page="More"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>More</span></button>
             </div>
-            <div class="nav-section team-section"><button class="section-label"><span>Your teams</span><span>⌄</span><span class="add-team">+</span></button>
-              <div class="team-name"><span class="team-emoji">✳</span><span>Product</span><span class="chevron">⌄</span></div>
-              <button class="nav-item team-item" data-page="Home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1V10Z"/></svg><span>Home</span></button>
-              <button class="nav-item team-item active" data-page="Issues"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 9h10M7 13h7M7 17h4"/></svg><span>Issues</span></button>
-              <button class="nav-item team-item" data-page="Team projects"><svg viewBox="0 0 24 24"><path d="m12 2.8 9 5.1v8.2l-9 5.1-9-5.1V7.9l9-5.1Z"/><path d="m3.5 8.2 8.5 5 8.5-5M12 13.2v7.5"/></svg><span>Projects</span></button>
-              <button class="nav-item team-item" data-page="Team views"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/></svg><span>Views</span></button>
-              <button class="nav-item team-item" data-page="Members"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c.4-3.4 2.4-5 6-5s5.6 1.6 6 5M17 5.5a3 3 0 0 1 0 5.8M17 15c2.6.3 3.8 1.7 4 4"/></svg><span>Members</span></button>
+            <div class="nav-section team-section"><button class="section-label"><span>Your teams</span><span>⌄</span></button><button class="add-team" aria-label="Create team">+</button>
+              <button class="team-name" type="button" aria-label="Select team"><span class="team-emoji">✳</span><span>Product</span><span class="chevron">⌄</span></button>
+              <button class="nav-item team-item" aria-label="Home" data-page="Home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1V10Z"/></svg><span>Home</span></button>
+              <button class="nav-item team-item active" aria-label="Issues" data-page="Issues"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 9h10M7 13h7M7 17h4"/></svg><span>Issues</span></button>
+              <button class="nav-item team-item" aria-label="Team projects" data-page="Team projects"><svg viewBox="0 0 24 24"><path d="m12 2.8 9 5.1v8.2l-9 5.1-9-5.1V7.9l9-5.1Z"/><path d="m3.5 8.2 8.5 5 8.5-5M12 13.2v7.5"/></svg><span>Projects</span></button>
+              <button class="nav-item team-item" aria-label="Team views" data-page="Team views"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/></svg><span>Views</span></button>
+              <button class="nav-item team-item" aria-label="Members" data-page="Members"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c.4-3.4 2.4-5 6-5s5.6 1.6 6 5M17 5.5a3 3 0 0 1 0 5.8M17 15c2.6.3 3.8 1.7 4 4"/></svg><span>Members</span></button>
             </div>
             <div class="sidebar-bottom">
-              <div class="user-profile"><div class="user-avatar">AM</div><div class="user-meta"><b>Alex Morgan</b><small>Free plan</small></div><button class="profile-more">···</button></div>
+              <div class="user-profile"><div class="user-avatar">AM</div><div class="user-meta"><b>Alex Morgan</b><small>Free plan</small></div><button class="profile-more" aria-label="Profile menu unavailable" disabled>···</button></div>
             </div>
           </nav>
         </aside>
         <main class="main-panel">
           <header class="page-header">
             <div class="page-title-wrap"><div class="breadcrumb" id="breadcrumb">Product / Issues</div><h1 id="page-title">Issues</h1></div>
-            <div class="header-actions"><button class="quiet-button" id="share-view"><svg viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Share</span></button><button class="new-project-button" id="new-issue-header"><span>＋</span> New issue</button><button class="new-project-button" id="new-project"><span>＋</span> New project</button></div>
+            <div class="header-actions"><button class="quiet-button" id="share-view" aria-label="Share view"><svg viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Share</span></button><button class="new-project-button" id="new-issue-header"><span>＋</span> New issue</button><button class="new-project-button" id="new-project"><span>＋</span> New project</button></div>
           </header>
           <section class="view-toolbar" id="view-toolbar">
             <div class="view-tabs" id="view-tabs"><button class="view-pill selected" data-view="All issues">All issues</button><button class="view-pill" data-view="Active">Active</button><button class="view-pill" data-view="Backlog">Backlog</button><button class="saved-view" title="Add view">◈</button></div>
-            <div class="toolbar-actions"><button class="toolbar-button" id="filter-button"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10m-7 6h4"/></svg><span>Filter</span></button><button class="toolbar-button" id="display-button"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg><span>Display</span></button><button class="icon-button details-toggle" id="details-toggle" title="Toggle details panel"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button></div>
+            <div class="toolbar-actions"><button class="toolbar-button" id="filter-button" aria-label="Filter"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10m-7 6h4"/></svg><span>Filter</span></button><button class="toolbar-button" id="display-button" aria-label="Display"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg><span>Display</span></button><button class="icon-button details-toggle" id="details-toggle" title="Toggle details panel"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button></div>
           </section>
           <section class="content-area" id="content-area"></section>
           <div class="toast" id="toast" role="status"></div>

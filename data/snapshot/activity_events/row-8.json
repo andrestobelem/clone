@@ -1,0 +1,9 @@
+{
+  "action": "updated",
+  "actor_id": 1,
+  "created_at": "2026-10-04T16:32:40+00:00",
+  "entity_id": 1,
+  "entity_type": "project",
+  "id": 8,
+  "payload": "{\"status\": \"Backlog\"}"
+}

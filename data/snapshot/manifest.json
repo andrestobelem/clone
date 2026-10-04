@@ -1,5 +1,5 @@
 {
-  "format_version": 1,
+  "format_version": 2,
   "tables": {
     "activity_events": {
       "columns": [
@@ -9,6 +9,21 @@
         "actor_id",
         "action",
         "payload",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "actors": {
+      "columns": [
+        "id",
+        "kind",
+        "name",
+        "active",
+        "member_id",
+        "key",
+        "avatar_color",
         "created_at"
       ],
       "primary_key": [

@@ -1,0 +1,11 @@
+version = 1
+revision = 5
+requires-python = "==3.14.*"
+
+[options]
+exclude-newer = "2026-09-26T20:03:24Z"
+
+[[package]]
+name = "at-clone"
+version = "0.1.0"
+source = { virtual = "." }

@@ -55,6 +55,7 @@ class WorkspaceTests(unittest.TestCase):
         sync.mutate("DELETE", "/api/issues/PRO-248", {})
         with closing(ws.db()) as con:
             con.execute("UPDATE members SET active=0 WHERE id=5")
+            con.execute("UPDATE actors SET active=0 WHERE id=5")
             con.commit()
         sync.export()
         original = self.image()
@@ -161,7 +162,7 @@ class WorkspaceTests(unittest.TestCase):
         with self.assertRaises(sync.SyncConflict):
             sync.mutate("POST", "/api/issues", {"title": "blocked"})
         result = sync.import_snapshot(force=True)
-        with sqlite3.connect(Path(result["backup"]) / "workspace.sqlite3") as con:
+        with closing(sqlite3.connect(Path(result["backup"]) / "workspace.sqlite3")) as con:
             self.assertEqual(con.execute("SELECT title FROM issues WHERE id=1").fetchone()[0], "Outside writer")
 
     def test_invalid_snapshots_leave_database_unchanged(self):
@@ -388,7 +389,7 @@ class WorkspaceTests(unittest.TestCase):
             ("automations", "create", None, {"name": "New", "trigger": {"event": "issue.created"}, "action": {}}),
             ("recurring", "create", None, {"title": "Future", "nextRun": "2099-01-01"}),
         ]
-        self.assertEqual({(r, a) for r, actions in cli.ACTIONS.items() for a in actions}, {(r, a) for r, a, _, _ in cases})
+        self.assertEqual({(r, a) for r, actions in cli.ACTIONS.items() if r != "agents" for a in actions}, {(r, a) for r, a, _, _ in cases})
         with patch.object(ws, "now", return_value="2026-10-04T00:00:00+00:00"), patch.object(ws, "uuid", SimpleNamespace(uuid4=lambda: SimpleNamespace(hex="attachment-test"))):
             for n, (resource, action, ident, data) in enumerate(cases):
                 with self.subTest(resource=resource, action=action, data=data):

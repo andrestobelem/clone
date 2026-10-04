@@ -12,17 +12,32 @@ A group that owns issues, workflow statuses, and cycles. An issue belongs to one
 _Avoid_: Squad
 
 **Member**:
-A person in the workspace who can be assigned to or take part in work.
+A person in the workspace. Each member has an actor identity.
 
-**Team membership**:
-The relationship that makes a workspace member part of a team.
-_Avoid_: Team member (when naming the relationship)
+**Actor**:
+A person or agent with an identity in the workspace. An actor can perform actions, receive issues, and take part in work.
+
+**Agent**:
+A software actor with a persistent identity in the workspace.
+
+**Team participation**:
+The relationship that makes an actor part of a team.
+_Avoid_: Team membership (when the relationship can include agents)
+
+**Project participation**:
+The relationship that makes an actor part of a project.
 
 ## Planning work
 
 **Issue**:
-A unit of work owned by one team. It can be assigned to a member and linked to a project, cycle, or other issue.
+A unit of work owned by one team. It can be assigned to an actor and linked to a project, cycle, or other issue.
 _Avoid_: Task, ticket
+
+**Issue identifier**:
+A stable reference that identifies one issue in the workspace. An issue keeps this reference when it moves to another team.
+
+**Sub-issue**:
+An issue that belongs to a parent issue. Parent and sub-issue relationships form a hierarchy.
 
 **Workflow status**:
 A state in a team's issue workflow.

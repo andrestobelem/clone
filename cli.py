@@ -14,13 +14,15 @@ import workspace as ws
 
 
 RESOURCES = {
-    "issues": "issues", "projects": "projects", "teams": "teams", "members": "members",
+    "actors": "actors", "agents": "actors", "issues": "issues", "projects": "projects", "teams": "teams", "members": "members",
     "statuses": "issue_statuses", "labels": "labels", "cycles": "cycles", "views": "views",
     "inbox": "notifications", "automations": "automations", "recurring": "recurring_rules",
     "settings": "app_settings", "preferences": "app_settings", "workspace": "workspace",
 }
 # Each entry names the existing HTTP method and path.
 ACTIONS = {
+    "agents": {"create": ("POST", "/api/agents"), "update": ("PATCH", "/api/agents/{id}"),
+               "deactivate": ("POST", "/api/agents/{id}/deactivate"), "restore": ("POST", "/api/agents/{id}/restore")},
     "issues": {"create": ("POST", "/api/issues"), "update": ("PATCH", "/api/issues/{id}"),
                "archive": ("DELETE", "/api/issues/{id}"), "restore": ("POST", "/api/issues/{id}/restore"),
                "comment": ("POST", "/api/issues/{id}/comments"), "attach": ("POST", "/api/issues/{id}/attachments"),
@@ -53,26 +55,70 @@ JSON_FIELDS = ("labelIds", "teamIds", "memberIds", "subscriberIds", "ids", "filt
                "action", "value", "dependencies", "milestones", "recurringRule", "isFavorite")
 
 
+class ArgumentError(ValueError):
+    pass
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise ArgumentError(message)
+
+
+def describe():
+    commands = []
+    def visit(current, path):
+        branches = [a for a in current._actions if isinstance(a, argparse._SubParsersAction)]
+        if branches:
+            for action in branches:
+                for name, child in action.choices.items():
+                    visit(child, path + [name])
+            return
+        arguments = []
+        for action in current._actions:
+            if action.dest == "help":
+                continue
+            spec = {"name": action.dest, "flags": action.option_strings, "required": action.required,
+                    "type": "boolean" if isinstance(action, argparse._StoreTrueAction) else
+                            {int: "integer", float: "number", json.loads: "json"}.get(action.type, "string"),
+                    "repeatable": isinstance(action, argparse._AppendAction)}
+            defaults = {"actor": 1, "json": False, "db": str(ws.ROOT / "data/workspace.sqlite3")}
+            if action.dest in defaults:
+                spec["default"] = defaults[action.dest]
+            if action.dest == "sync_dir":
+                spec["defaultRule"] = "snapshot/ next to the database"
+            if action.default != argparse.SUPPRESS:
+                spec["default"] = action.default
+            if action.choices is not None:
+                spec["choices"] = list(action.choices)
+            if action.help and action.help != argparse.SUPPRESS:
+                spec["description"] = action.help
+            arguments.append(spec)
+        commands.append({"path": path, "arguments": arguments})
+    visit(parser(), [])
+    return {"formatVersion": 1, "commands": commands}
+
+
 def kebab(text):
     import re
     return re.sub(r"([A-Z])", lambda m: "-" + m[1].lower(), text)
 
 
 def globals_parser():
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = ArgumentParser(add_help=False)
     parser.add_argument("--db", default=argparse.SUPPRESS, help="SQLite path")
     parser.add_argument("--sync-dir", default=argparse.SUPPRESS, help="Snapshot directory")
-    parser.add_argument("--actor", type=int, default=argparse.SUPPRESS, help="Member ID (default: 1)")
+    parser.add_argument("--actor", type=int, default=argparse.SUPPRESS, help="Actor ID (default: 1)")
     parser.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Write JSON output")
     return parser
 
 
 def parser():
     common = globals_parser()
-    root = argparse.ArgumentParser(description=__doc__, parents=[common])
+    root = ArgumentParser(description=__doc__, parents=[common])
     commands = root.add_subparsers(dest="command", required=True)
     init = commands.add_parser("init", parents=[common], help="Create a database and export it")
     init.add_argument("--demo", action="store_true", help="Load demo data")
+    commands.add_parser("describe", parents=[common], help="List commands as JSON")
     commands.add_parser("serve", parents=[common], help="Run the web server")
     search = commands.add_parser("search", parents=[common])
     search.add_argument("query")
@@ -80,7 +126,7 @@ def parser():
     commands.add_parser("export", parents=[common], help="Write the existing UI JSON export")
     sync = commands.add_parser("sync", parents=[common])
     operations = sync.add_subparsers(dest="verb", required=True)
-    for name in ("status", "validate", "export", "import"):
+    for name in ("status", "validate", "export", "import", "migrate"):
         op = operations.add_parser(name, parents=[common])
         if name in ("export", "import"):
             op.add_argument("--dry-run", action="store_true")
@@ -154,6 +200,8 @@ def read_resource(args):
         con.execute("BEGIN")
         entries = [dict(r) for r in con.execute(f'SELECT * FROM "{table}"')]
         if args.verb == "list":
+            if resource == "agents":
+                entries = [r for r in entries if r["kind"] == "agent"]
             if not args.all:
                 entries = [r for r in entries if not r.get("archived", 0) and r.get("active", 1)]
                 if resource == "inbox":
@@ -178,6 +226,10 @@ def read_resource(args):
         item = next((r for r in entries if str(r[key]) == ident), None)
         if not item:
             raise ValueError("Record not found")
+        if resource == "agents" and item["kind"] != "agent":
+            raise ValueError("Agent not found")
+        if resource in ("actors", "agents"):
+            return ws.actor_record(con, item["id"])
         if resource == "issues":
             return ws.issue_row(con, item["id"])
         if resource == "projects" and not item["archived"]:
@@ -190,6 +242,8 @@ def read_resource(args):
 
 
 def execute(args):
+    if args.command == "describe":
+        return describe()
     ws.configure(getattr(args, "db", None), getattr(args, "sync_dir", None))
     command = args.command
     if command == "init":
@@ -201,6 +255,8 @@ def execute(args):
     if command == "sync":
         if args.verb == "status":
             return snapshot.status()
+        if args.verb == "migrate":
+            return snapshot.migrate()
         if args.verb == "validate":
             return snapshot.validate()
         method = snapshot.export if args.verb == "export" else snapshot.import_snapshot
@@ -224,7 +280,7 @@ def execute(args):
                 raise ValueError("Attachment not found")
             content = snapshot.attachment_bytes({"issue_attachments": [dict(row)]}, ws.DATA_DIR / "attachments")[row["storage_name"]]
             output = Path(args.output).resolve()
-            if output == ws.DB_PATH or output.is_relative_to(ws.SNAPSHOT_DIR) or output.is_relative_to(ws.DATA_DIR / "attachments"):
+            if output.is_relative_to(ws.DATA_DIR) or output.is_relative_to(ws.SNAPSHOT_DIR):
                 raise ValueError("Output must not replace workspace storage")
             output.write_bytes(content)
             return {"output": str(output), "size": len(content)}
@@ -250,13 +306,23 @@ def execute(args):
             finally:
                 con.rollback()
     result = snapshot.mutate(method, route, data)
-    result.pop("_status", None)
+    if result.pop("_status", 200) >= 400:
+        raise ValueError(result.get("error", "Command failed"))
     return result
 
 
 def main(argv=None):
-    args = parser().parse_args(argv)
+    argv = list(sys.argv[1:] if argv is None else argv)
+    json_errors = "--json" in argv[:argv.index("--") if "--" in argv else len(argv)]
+    def fail(error, code, exit_code, **details):
+        if json_errors:
+            print(json.dumps({"code": code, "message": str(error), "exitCode": exit_code, **details},
+                             ensure_ascii=False), file=sys.stderr)
+        else:
+            print(str(error), file=sys.stderr)
+        return exit_code
     try:
+        args = parser().parse_args(argv)
         result = execute(args)
         if getattr(args, "json", False) or isinstance(result, (dict, list)):
             print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -264,20 +330,15 @@ def main(argv=None):
             print(result)
         return 0
     except snapshot.SyncConflict as error:
-        print(str(error), file=sys.stderr)
-        return 3
+        return fail(error, "sync_conflict", 3)
     except snapshot.PendingExport as error:
-        print(str(error), file=sys.stderr)
-        return 4
+        return fail(error, "pending_export", 4, committed=True, recoveryRequired=True)
     except (ValueError, KeyError, TypeError) as error:
-        print(str(error), file=sys.stderr)
-        return 2
+        return fail(error, "invalid_input", 2)
     except sqlite3.IntegrityError as error:
-        print("Conflict or invalid relationship: " + str(error), file=sys.stderr)
-        return 3
+        return fail("Conflict or invalid relationship: " + str(error), "relationship_conflict", 3)
     except (OSError, sqlite3.Error) as error:
-        print(str(error), file=sys.stderr)
-        return 4
+        return fail(error, "storage_error", 4)
 
 
 if __name__ == "__main__":

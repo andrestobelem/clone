@@ -8,7 +8,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
-from workspace import ROOT, DATA_DIR, DB_PATH, db, bootstrap, issue_row
+from workspace import ROOT, db, bootstrap, issue_row, now
 import workspace
 import snapshot
 
@@ -27,6 +27,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def body(self):
         size=int(self.headers.get("Content-Length",0))
+        if size<0:raise ValueError("Content-Length must not be negative")
         if size>5_000_000:raise ValueError("Request body too large")
         raw=self.rfile.read(size) if size else b"{}"
         return json.loads(raw.decode("utf-8")) if raw else {}
@@ -61,6 +62,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"error":str(error),"committed":True},503)
             except ValueError as error:
                 self.send_json({"error":str(error)},400)
+            except (OSError, sqlite3.Error) as error:
+                self.send_json({"error":"Storage unavailable","detail":str(error)},503)
 
     def api_get_locked(self,path,query):
         con=db()
@@ -68,14 +71,21 @@ class Handler(BaseHTTPRequestHandler):
             snapshot.recover(con)
             con.execute("BEGIN")
             if path=="/api/bootstrap":return self.send_json(bootstrap(con))
+            actor_match=re.fullmatch(r"/api/(actors|agents)(?:/(\d+))?",path)
+            if actor_match:
+                kind="agent" if actor_match[1]=="agents" else None
+                if actor_match[2]:
+                    record=workspace.actor_record(con,int(actor_match[2]))
+                    if not record or (kind and record["kind"]!=kind):return self.send_json({"error":"Actor not found"},404)
+                    return self.send_json(record)
+                return self.send_json(workspace.actor_records(con,kind,query.get("all",["false"])[0]=="true"))
             attachment_match=re.fullmatch(r"/api/attachments/(\d+)",path)
             if attachment_match:
                 attachment_id=int(attachment_match.group(1))
                 row=con.execute("SELECT * FROM issue_attachments WHERE id=?",(attachment_id,)).fetchone()
                 if not row:return self.send_json({"error":"Attachment not found"},404)
-                target=(DATA_DIR/"attachments"/row["storage_name"]).resolve()
-                if target.parent!=(DATA_DIR/"attachments").resolve() or not target.is_file():return self.send_json({"error":"Attachment file not found"},404)
-                content=target.read_bytes();fallback=re.sub(r"[^A-Za-z0-9._-]","_",row["name"]) or "attachment"
+                content=snapshot.attachment_bytes({"issue_attachments":[dict(row)]}, workspace.DATA_DIR/"attachments")[row["storage_name"]]
+                fallback=re.sub(r"[^A-Za-z0-9._-]","_",row["name"]) or "attachment"
                 self.send_response(200);self.send_header("Content-Type",row["content_type"]);self.send_header("Content-Length",str(len(content)))
                 self.send_header("Content-Disposition",f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(row['name'])}")
                 self.send_header("X-Content-Type-Options","nosniff");self.send_header("Cache-Control","no-store");self.end_headers();self.wfile.write(content);return
@@ -83,12 +93,14 @@ class Handler(BaseHTTPRequestHandler):
                 result=bootstrap(con);result["exportedAt"]=now();return self.send_json(result)
             if path=="/api/search":
                 return self.send_json(workspace.search(con,query.get("q",[""])[0],query.get("scope",["All"])[0]))
-            if path.startswith("/api/issues/"):
-                ident=path.split("/")[3];row=con.execute("SELECT id FROM issues WHERE identifier=?",(ident,)).fetchone()
+            issue_match=re.fullmatch(r"/api/issues/([^/]+)",path)
+            if issue_match:
+                ident=issue_match[1];row=con.execute("SELECT id FROM issues WHERE identifier=?",(ident,)).fetchone()
                 if not row:return self.send_json({"error":"Issue not found"},404)
                 return self.send_json(issue_row(con,row[0]))
-            if path.startswith("/api/projects/"):
-                pid=int(path.split("/")[3]);p=next((p for p in bootstrap(con)["projects"] if p["id"]==pid),None)
+            project_match=re.fullmatch(r"/api/projects/(\d+)",path)
+            if project_match:
+                pid=int(project_match[1]);p=next((p for p in bootstrap(con)["projects"] if p["id"]==pid),None)
                 if not p:return self.send_json({"error":"Project not found"},404)
                 return self.send_json(p)
             if path=="/api/health":return self.send_json({"ok":True,"database":"sqlite","mode":"local-single-user"})
@@ -99,23 +111,30 @@ class Handler(BaseHTTPRequestHandler):
         path=unquote(urlparse(self.path).path)
         try:data=self.body()
         except (ValueError,json.JSONDecodeError) as e:return self.send_json({"error":str(e)},400)
-        con=db()
+        con=None
         try:
+            con=db()
             result=snapshot.mutate(method,path,data,con=con)
             status=result.pop("_status",200);self.send_json(result,status)
         except KeyError as e:
-            con.rollback();self.send_json({"error":f"Missing field: {e.args[0]}"},400)
+            if con:con.rollback()
+            self.send_json({"error":f"Missing field: {e.args[0]}"},400)
         except ValueError as e:
-            con.rollback();self.send_json({"error":str(e)},400)
+            if con:con.rollback()
+            self.send_json({"error":str(e)},400)
         except snapshot.SyncConflict as e:
-            con.rollback();self.send_json({"error":str(e)},409)
+            if con:con.rollback()
+            self.send_json({"error":str(e)},409)
         except snapshot.PendingExport as e:
             self.send_json({"error":str(e),"committed":True},503)
         except sqlite3.IntegrityError as e:
-            con.rollback();self.send_json({"error":f"Conflict or invalid relationship: {e}"},409)
+            if con:con.rollback()
+            self.send_json({"error":f"Conflict or invalid relationship: {e}"},409)
         except Exception as e:
-            con.rollback();self.send_json({"error":"Internal error","detail":str(e)},500)
-        finally:con.close()
+            if con:con.rollback()
+            self.send_json({"error":"Internal error","detail":str(e)},500)
+        finally:
+            if con:con.close()
 
 def recurring_worker():
     while True:
@@ -127,16 +146,14 @@ def recurring_worker():
 
 
 def main():
-    global DATA_DIR, DB_PATH
-    DATA_DIR, DB_PATH = workspace.DATA_DIR, workspace.DB_PATH
-    if not DB_PATH.exists():
+    if not workspace.DB_PATH.exists():
         if workspace.SNAPSHOT_DIR.exists():
-            raise ValueError("Snapshot found. Run python3 cli.py sync import first.")
+            raise ValueError("Snapshot found. Run uv run python cli.py sync import first.")
         snapshot.initialize(demo=True)
     else:
         snapshot.prepare()
     host=os.environ.get("CLONE_HOST","127.0.0.1");port=int(os.environ.get("PORT","4173"))
-    print(f"Linear-style workspace running at http://{host}:{port} (SQLite: {DB_PATH})",flush=True)
+    print(f"Linear-style workspace running at http://{host}:{port} (SQLite: {workspace.DB_PATH})",flush=True)
     threading.Thread(target=recurring_worker,name="recurring-issue-scheduler",daemon=True).start()
     ThreadingHTTPServer((host,port),Handler).serve_forever()
 

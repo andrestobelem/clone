@@ -19,3 +19,10 @@
 - When a domain term or boundary is resolved, update `GLOSSARY.md` in the same change. Add only concepts that are specific to this product.
 - Keep `GLOSSARY.md` focused on domain meaning. Do not add implementation details, requirements, or open questions.
 - Use `.agents/skills/domain-modeling/SKILL.md` and its `GLOSSARY-FORMAT.md` when you need to build or change the domain model or glossary.
+
+## Workspace operations
+
+- Use [.agents/skills/workspace-operations/SKILL.md](.agents/skills/workspace-operations/SKILL.md) for requests to read or change workspace data.
+- Read [Agent CLI guide](docs/AGENTS.md) before you use the workspace.
+- Use the CLI for workspace actions. Do not edit SQLite or snapshot records to perform normal actions.
+- Use a registered actor ID for agent writes.

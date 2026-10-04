@@ -13,6 +13,7 @@ import uuid
 from urllib.parse import quote
 
 import workspace as ws
+from validation import json_value
 
 
 class SyncConflict(Exception):
@@ -55,18 +56,18 @@ def write_json(path, value):
 
 def read_json(path):
     try:
-        return json.loads(path.read_text("utf-8"), parse_constant=lambda v: (_ for _ in ()).throw(ValueError("Invalid JSON number")))
+        return json_value(path.read_text("utf-8"))
     except (UnicodeError, json.JSONDecodeError) as error:
         raise ValueError(f"Invalid JSON: {path}") from error
 
 
-@lru_cache(maxsize=1)
-def schema():
+@lru_cache(maxsize=2)
+def schema(version=2):
     con = sqlite3.connect(":memory:")
     con.row_factory = sqlite3.Row
-    con.executescript(ws.SCHEMA)
+    con.executescript(ws.SCHEMA if version == 2 else ws.LEGACY_SCHEMA)
     result = {}
-    for row in con.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"):
+    for row in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"):
         fields = [dict(r) for r in con.execute(f'PRAGMA table_info("{row[0]}")')]
         result[row[0]] = {"columns": [r["name"] for r in fields],
                           "primary_key": [r["name"] for r in sorted(fields, key=lambda r: r["pk"]) if r["pk"]]}
@@ -79,7 +80,8 @@ def record_name(row, spec):
 
 
 def rows(con):
-    expected = schema()
+    version = 2 if con.execute("SELECT 1 FROM sqlite_master WHERE name='actors'").fetchone() else 1
+    expected = schema(version)
     actual = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
     if actual - set(expected) - ws.REMOVED_TABLES - {"__sync_meta"} or set(expected) - actual:
         raise ValueError("Database tables do not match the supported schema")
@@ -113,8 +115,9 @@ def attachment_bytes(records, folder):
 
 
 def files_for(records, attachments):
-    specs = schema()
-    files = {"manifest.json": encode({"format_version": 1, "tables": specs})}
+    version = 2 if "actors" in records else 1
+    specs = schema(version)
+    files = {"manifest.json": encode({"format_version": version, "tables": specs})}
     for table, entries in records.items():
         for row in entries:
             files[f"{table}/{record_name(row, specs[table])}"] = encode(row)
@@ -182,13 +185,17 @@ def set_token(con, value):
 def stage_files(files):
     ws.SNAPSHOT_DIR.parent.mkdir(parents=True, exist_ok=True)
     folder = Path(tempfile.mkdtemp(prefix=".sync-stage-", dir=ws.SNAPSHOT_DIR.parent))
-    for name, content in files.items():
-        path = folder / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("wb") as handle:
-            handle.write(content)
-            handle.flush()
-            os.fsync(handle.fileno())
+    try:
+        for name, content in files.items():
+            path = folder / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("wb") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+    except BaseException:
+        cleanup(folder)
+        raise
     return folder
 
 
@@ -216,7 +223,28 @@ def recover(con):
             cleanup(live)
         cleanup(stage)
         cleanup(backup)
+        if not committed and journal.get("upgrade_stage"):
+            cleanup(Path(journal["upgrade_stage"]))
+        if not committed and journal.get("new_database"):
+            save_state(disk_files(ws.SNAPSHOT_DIR), database_files(con))
         if committed:
+            if journal.get("upgrade_stage"):
+                upgrade_stage = Path(journal["upgrade_stage"])
+                upgrade_backup = Path(journal["upgrade_backup"])
+                current = digest(disk_files(ws.SNAPSHOT_DIR))
+                if current != journal["upgrade_desired"]:
+                    if current != journal["incoming_digest"] and (ws.SNAPSHOT_DIR.exists() or not upgrade_backup.exists()):
+                        raise SyncConflict("Snapshot changed during import recovery. Restore the input files.")
+                    if not upgrade_stage.exists():
+                        raise PendingExport("Import committed. Snapshot upgrade needs its staged files.")
+                    if ws.SNAPSHOT_DIR.exists():
+                        ws.SNAPSHOT_DIR.replace(upgrade_backup)
+                    upgrade_stage.replace(ws.SNAPSHOT_DIR)
+                save_state(disk_files(ws.SNAPSHOT_DIR), database_files(con))
+                cleanup(upgrade_stage)
+                cleanup(upgrade_backup)
+                path.unlink()
+                return
             write_json(local_path("state.json"), {"snapshot_dir": str(ws.SNAPSHOT_DIR),
                                                    "digest": journal["incoming_digest"],
                                                    "database_digest": digest(database_files(con))})
@@ -335,6 +363,8 @@ def initialize(demo=False):
             else:
                 con.execute("INSERT INTO workspace VALUES(1,'Workspace','A',?)", (ws.now(),))
                 con.execute("INSERT INTO members(id,name,email,created_at) VALUES(1,'Local member','local@localhost',?)", (ws.now(),))
+            if not demo:
+                ws.create_member_actors(con)
             begin_export(con, database_files(con))
             con.commit()
             finish_export(con)
@@ -367,7 +397,7 @@ def backup_database(con):
 
 
 def export(force=False, dry_run=False):
-    with locked(), closing(ws.db()) as con:
+    with locked(), closing(ws.db(allow_legacy=True)) as con:
         recover(con)
         con.execute("BEGIN IMMEDIATE")
         existing = disk_files(ws.SNAPSHOT_DIR)
@@ -397,8 +427,11 @@ def load_snapshot():
     if "manifest.json" not in files:
         raise ValueError("Snapshot manifest not found")
     manifest = read_json(ws.SNAPSHOT_DIR / "manifest.json")
-    specs = schema()
-    if manifest != {"format_version": 1, "tables": specs}:
+    version = manifest.get("format_version") if isinstance(manifest, dict) else None
+    if type(version) is not int or version not in (1, 2):
+        raise ValueError("Unsupported snapshot version or schema")
+    specs = schema(version)
+    if manifest != {"format_version": version, "tables": specs}:
         raise ValueError("Unsupported snapshot version or schema")
     records = {name: [] for name in specs}
     known = {"manifest.json"}
@@ -423,6 +456,9 @@ def load_snapshot():
     known.update("attachments/" + name for name in attachments)
     if set(files) != known:
         raise ValueError("Snapshot contains unknown files")
+    if version == 1:
+        records = upgrade_records(records)
+    specs = schema()
     candidate = sqlite3.connect(":memory:")
     candidate.row_factory = sqlite3.Row
     candidate.executescript(ws.SCHEMA)
@@ -433,6 +469,7 @@ def load_snapshot():
         insert_records(candidate, records)
         if candidate.execute("PRAGMA foreign_key_check").fetchall():
             raise ValueError("Snapshot contains invalid references")
+        validate_actors(candidate)
         for r in candidate.execute("SELECT i.id FROM issues i JOIN issue_statuses s ON s.id=i.status_id WHERE i.team_id!=s.team_id"):
             raise ValueError(f"Issue {r[0]} has a workflow status from another team")
         if candidate.execute("SELECT 1 FROM issues i WHERE i.project_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM project_teams p WHERE p.project_id=i.project_id AND p.team_id=i.team_id)").fetchone():
@@ -446,7 +483,7 @@ def load_snapshot():
                     if key.endswith("_json") or (key == "payload" and "action" in row):
                         if not isinstance(value, str):
                             raise ValueError("JSON fields must contain JSON text")
-                        json.loads(value)
+                        json_value(value)
         candidate.commit()
         canonical = rows(candidate)
         if encode(canonical) != encode({t: sorted(entries, key=lambda r: tuple(r[k] for k in specs[t]["primary_key"])) for t, entries in records.items()}):
@@ -478,7 +515,7 @@ def status():
         existing = disk_files(ws.SNAPSHOT_DIR)
         if not ws.DB_PATH.exists():
             return {"database_exists": False, "snapshot_exists": bool(existing)}
-        with closing(ws.db()) as con:
+        with closing(ws.db(allow_legacy=True)) as con:
             recover(con)
             existing = disk_files(ws.SNAPSHOT_DIR)
             files = database_files(con)
@@ -486,21 +523,26 @@ def status():
             return {"database_exists": True, "snapshot_exists": bool(existing),
                     "files_changed": bool(saved and digest(existing) != saved["digest"]),
                     "database_changed": bool(saved and digest(files) != saved.get("database_digest", saved["digest"])),
-                    "differences": differences(files, existing)}
+                    "differences": differences(files, existing),
+                    "migration_required": "actors" not in rows(con)}
 
 
 def import_snapshot(force=False, dry_run=False):
     with locked():
         existed = ws.DB_PATH.exists()
-        con = ws.db() if existed else None
+        con = ws.db(allow_legacy=True) if existed else None
         committed = False
         try:
             if con:
                 recover(con)
             records, attachments, incoming = load_snapshot()
             current = database_files(con) if con else {}
+            legacy_database = con is not None and "actors" not in rows(con)
             saved = None if force else state()
-            if existed and not force and digest(current) != (saved.get("database_digest", saved["digest"]) if saved else digest(files_for(records, attachments))):
+            expected_records = {k: v for k, v in records.items() if k != "actors"} if legacy_database else records
+            expected_database = (saved.get("database_digest", saved["digest"]) if saved
+                                 else digest(files_for(expected_records, attachments)))
+            if existed and not force and digest(current) != expected_database:
                 raise SyncConflict("Database has changes that import would discard. Export them or use --force.")
             result = differences(current, files_for(records, attachments))
             if dry_run:
@@ -521,16 +563,28 @@ def import_snapshot(force=False, dry_run=False):
             value = uuid.uuid4().hex
             journal = {"kind": "import", "token": value, "snapshot_dir": str(ws.SNAPSHOT_DIR),
                        "stage": str(stage), "backup": str(backup), "no_old_attachments": not live.exists(),
-                       "incoming_digest": digest(incoming)}
+                       "incoming_digest": digest(incoming), "new_database": not existed}
+            if json.loads(incoming["manifest.json"])["format_version"] == 1:
+                upgrade_stage = stage_files(files_for(records, attachments))
+                journal.update(upgrade_stage=str(upgrade_stage),
+                               upgrade_backup=str(upgrade_stage.with_name(upgrade_stage.name + "-old")),
+                               upgrade_desired=digest(files_for(records, attachments)))
+            if legacy_database:
+                con.execute("PRAGMA foreign_keys=OFF")
             con.execute("BEGIN IMMEDIATE")
             con.execute("PRAGMA defer_foreign_keys=ON")
             ws.remove_unused_tables(con)
+            if legacy_database:
+                for table in schema(1):
+                    con.execute(f'DROP TABLE "{table}"')
             for statement in ws.SCHEMA.split(";"):
                 if statement.strip():
                     con.execute(statement)
             for table in schema():
                 con.execute(f'DELETE FROM "{table}"')
             insert_records(con, records)
+            if con.execute("PRAGMA foreign_key_check").fetchall():
+                raise ValueError("Import contains invalid references")
             set_token(con, value)
             write_json(local_path("journal.json"), journal)
             if live.exists():
@@ -551,3 +605,58 @@ def import_snapshot(force=False, dry_run=False):
         finally:
             if con:
                 con.close()
+
+
+def upgrade_records(records):
+    upgraded = dict(records)
+    upgraded["actors"] = [
+        {"id": m["id"], "kind": "member", "name": m["name"], "active": m["active"],
+         "member_id": m["id"], "key": None, "avatar_color": m["avatar_color"], "created_at": m["created_at"]}
+        for m in records["members"]
+    ]
+    return upgraded
+
+
+def validate_actors(con):
+    if con.execute("""SELECT 1 FROM members m LEFT JOIN actors a ON a.member_id=m.id
+        WHERE a.id IS NULL OR a.kind!='member' OR a.id!=m.id OR a.name!=m.name
+        OR a.active!=m.active OR a.avatar_color!=m.avatar_color OR a.created_at!=m.created_at""").fetchone():
+        raise ValueError("Member actor does not match its profile")
+    if con.execute("SELECT 1 FROM actors WHERE kind='agent' AND key!=trim(key)").fetchone():
+        raise ValueError("Agent key must not contain outer spaces")
+
+
+def migrate():
+    with locked(), closing(ws.db(allow_legacy=True)) as con:
+        check_files(con)
+        old = rows(con)
+        if "actors" in old:
+            return {"migrated": False, "format_version": 2}
+        result = {"migrated": True, "format_version": 2, "backup": backup_database(con)}
+        existing = disk_files(ws.SNAPSHOT_DIR)
+        if existing:
+            shutil.copytree(ws.SNAPSHOT_DIR, Path(result["backup"]) / "snapshot")
+        records = upgrade_records(old)
+        # Foreign keys must be disabled before the transaction that rebuilds tables.
+        con.execute("PRAGMA foreign_keys=OFF")
+        try:
+            con.execute("BEGIN IMMEDIATE")
+            ws.remove_unused_tables(con)
+            for table in schema(1):
+                con.execute(f'DROP TABLE "{table}"')
+            for statement in ws.SCHEMA.split(";"):
+                if statement.strip():
+                    con.execute(statement)
+            insert_records(con, records)
+            validate_actors(con)
+            if con.execute("PRAGMA foreign_key_check").fetchall():
+                raise ValueError("Migration contains invalid references")
+            begin_export(con, database_files(con), digest(existing))
+            con.commit()
+            finish_export(con)
+        except BaseException:
+            con.rollback()
+            raise
+        finally:
+            con.execute("PRAGMA foreign_keys=ON")
+        return result

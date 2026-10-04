@@ -98,3 +98,9 @@ body{min-width:360px}
 @media(max-width:760px){.issue-row{grid-template-columns:minmax(48px,60px) minmax(95px,1fr) repeat(auto-fit,minmax(48px,auto));gap:6px}.issue-row .assignee-chip,.issue-row .updated-cell{display:none}.secondary-issue-group{padding-left:5px}}
 @media(max-width:900px){.property-grid{grid-template-columns:repeat(2,minmax(120px,1fr))}.settings-layout{grid-template-columns:145px minmax(0,1fr);gap:15px}}
 @media(max-width:650px){.inbox-layout{grid-template-columns:1fr}.inbox-detail{display:none}.home-columns{grid-template-columns:1fr}.home-columns .detail-section:last-child{grid-column:auto}.settings-layout{grid-template-columns:1fr}.settings-nav{position:static;display:flex;flex-direction:row;overflow:auto}.settings-nav b{display:none}.settings-form{grid-template-columns:1fr}.settings-form>.primary-button{grid-column:1}.modal-fields{grid-template-columns:1fr}.form-field.wide{grid-column:auto}.property-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.team-shortcuts{overflow:auto}.issue-row{grid-template-columns:55px minmax(110px,1fr) 77px 52px;gap:6px}.issue-status{display:none}.priority-chip{font-size:9px}.updated-cell{display:none}.detail-page{padding:0 2px}.detail-title{font-size:19px}}
+
+/* Keep keyboard focus visible on controls that remove default outlines. */
+:where(button,a,input,select,textarea,[role="button"]):focus-visible{outline:2px solid #7778d9;outline-offset:3px}
+.team-section>.add-team{float:right;margin-top:-23px;padding:3px 8px}
+.team-name{width:100%;text-align:left}
+@media(max-width:760px){.team-section>.add-team{float:none;margin-top:0}}

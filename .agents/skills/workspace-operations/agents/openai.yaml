@@ -1,0 +1,3 @@
+interface:
+  display_name: "Workspace Operations"
+  short_description: "Use the local CLI to read and update workspace data"
