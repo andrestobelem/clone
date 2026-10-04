@@ -61,7 +61,7 @@ DELETE archives issues and projects. DELETE removes saved views and team resourc
 | --- | --- |
 | Register agent | Required `key`, `name`; update accepts `name`; key cannot change |
 | Create issue | Required `title`; `teamId` defaults to 1; omitted `status` uses team default; optional `description`, `priority`, `assigneeId`, `projectId`, `cycleId`, `milestoneId`, `parentId`, `estimate`, `dueDate`, `externalUrl`, `labelIds`, `subscriberIds`, `recurringRule` |
-| Update issue | Supplied issue fields; `labelIds` and `subscriberIds` replace their lists |
+| Update issue | Supplied issue fields, including `teamId`; `labelIds` and `subscriberIds` replace their lists |
 | Comment | Required `body` |
 | Attach | Required nonempty `files` array; each item has `name`, base64 `data`, and optional MIME `type` |
 | Relate | `relatedIssueId` is an issue identifier, or provide `url`; optional relation `type` |
@@ -84,6 +84,8 @@ DELETE archives issues and projects. DELETE removes saved views and team resourc
 
 Project creation defaults to team 1 and the caller as lead and participant. Team creation adds the caller as Lead and creates standard workflow statuses. A missing team 1 must be replaced with an existing team ID in calls that use this default.
 
+Issue creation always subscribes the caller in addition to `subscriberIds`. On update, `subscriberIds` replaces the full list and can remove the caller. Team and project `memberIds` select participants, including agents. See [stored names and their meanings](ARCHITECTURE.md#components).
+
 ### Example issue request
 
 ```json
@@ -105,18 +107,35 @@ Use JSON `null` to clear nullable references or dates. Use `[]` to clear relatio
 
 Dates use valid `YYYY-MM-DD`. Empty optional dates are stored as null. Cycle endpoints also accept ISO timestamps and must be in chronological order. Recurring rules accept Daily, Weekly, Every 2 weeks, or Monthly and a valid nextRun date.
 
-Workflow categories are Backlog, Unstarted, Started, Completed, Canceled, and Duplicate. Project statuses and view entities/scopes use the values in [the specification](../SPEC.md). `filters`, `display`, `trigger`, `condition`, and `action` are JSON objects. `recurringRule` accepts an object, text, or null; objects are stored as JSON text.
+Workflow categories are Backlog, Unstarted, Started, Completed, Canceled, and Duplicate. Project statuses and saved-view scopes use the values in [the specification](../SPEC.md). Saved-view `entity` is `issues` or `projects`. `filters`, `display`, `trigger`, `condition`, and `action` are JSON objects. `recurringRule` accepts an object, text, or null; objects are stored as JSON text. This issue field does not create a schedule. Create a recurring rule through `/api/recurring` to schedule issue creation.
 
 Issue team/status, project/team, cycle/team, milestone/project, and parent relationships are checked by shared actions. Changing a team or project must clear or replace incompatible cycle or milestone references. Existing issue identifiers remain unchanged after a team move.
 
 Filters store the UI's selected scalar values, such as `{"priority":"Urgent","status":"All"}`. Display settings include layout, groupBy, orderBy, direction, and visibility options. Arbitrary filter objects are stored, but the UI only applies supported fields and values; an array is not a scalar filter value.
+
+### Automation rules
+
+`trigger.event` is `issue.created`, `issue.updated`, or `issue.completed`. An empty trigger never matches. `condition.priority` is a priority name or `Any`. `condition.label` is a label name or `Any`. Omitted, null, or empty text values for these two conditions impose no restriction.
+
+Each rule runs one action. `action.assignTo` selects an active actor ID and takes precedence over `action.name`. Otherwise, `action.name` supports `Assign to me`, `Add LABEL_NAME label`, or `Set status: STATUS_NAME`. `Assign to me` selects the actor that caused the event. Label and status names must match existing records for the issue team; workspace labels also match. Unknown action names, missing labels, and missing statuses cause no change.
+
+```json
+{
+  "actorId": 1,
+  "teamId": 1,
+  "name": "Assign urgent issues",
+  "trigger": {"event": "issue.created"},
+  "condition": {"priority": "Urgent"},
+  "action": {"name": "Assign to me"}
+}
+```
 
 ## Errors and retries
 
 | HTTP status | Meaning |
 | --- | --- |
 | 400 | Invalid input, missing required field, or invalid action relationship |
-| 404 | Unknown route or missing read resource |
+| 404 | Unknown read or mutation route, or missing read resource |
 | 409 | SQLite relationship conflict, inactive/unknown actor, or synchronization conflict |
 | 503 with `committed: true` | The change committed; snapshot publication needs recovery |
 | 503 without `committed` | Storage is unavailable during a read |

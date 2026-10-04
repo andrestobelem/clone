@@ -1,6 +1,6 @@
 # CLI and Git snapshots
 
-The project pins Python 3.14 with uv and uses the standard library. It runs on macOS and Linux. Run `uv sync` to create the project environment. The CLI uses an operating system file lock to share storage with the web server. Keep one database per storage directory. Keep all processes on the same database and snapshot paths.
+The project pins Python 3.14 with uv and uses the standard library. It runs on macOS and Linux. Run `uv sync --locked` to create the project environment. The CLI uses an operating system file lock to share storage with the web server. Keep one database per storage directory. Keep all processes on the same database and snapshot paths.
 
 See the [HTTP API](API.md) for payload fields and the [development guide](DEVELOPMENT.md) for temporary-storage checks.
 
@@ -30,6 +30,10 @@ Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for inval
 
 | Command group | Actions |
 | --- | --- |
+| `init` | Create empty storage; `--demo` adds demo records |
+| `serve` | Start the web server and recurring scheduler |
+| `search` | Search active issues and projects |
+| `export` | Write UI JSON data to stdout |
 | `issues` | list, show, create, update, archive, restore, comment, attach, relate, import |
 | `projects` | list, show, create, update, archive, restore, milestone, post-update, depend |
 | `teams` | list, show, create, update, add-resource, remove-resource |
@@ -49,7 +53,9 @@ Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for inval
 
 Members remain read-only. CLI mutations use the same actions and validation as the API. Settings can store the rule configuration used by the existing UI. Entities that the app only reads or creates do not have update or delete commands.
 
-Issues use their identifier, such as `PRO-248`. Other entities use their numeric ID. Settings use their key. Use `--all` with `list` to include archived and inactive records. Lists support `--team-id`, `--project-id`, and `--status` where those fields apply. Issue and project `show` include related data. Other lists return stored fields.
+Issues use their identifier, such as `PRO-248`. Other entities use their numeric ID. Settings use their key. Use `--all` with `list` to include archived and inactive records. `inbox list` selects the caller's active notifications; `inbox list --all` includes all recipients and archived notifications. Lists support `--team-id`, `--project-id`, and `--status` where those fields apply. Issue and active project `show` include related data. Archived project `show` returns stored fields. Team `show` includes participants, workflow statuses, and resources. Other lists return stored fields.
+
+The following commands are separate examples. Replace IDs and identifiers with values from your workspace. Use the identifier returned by `issues create` for later issue commands. External agents must also add their registered `--actor ID` to each write.
 
 ```sh
 uv run python cli.py issues create --team-id 1 --title 'Fix search' --priority High

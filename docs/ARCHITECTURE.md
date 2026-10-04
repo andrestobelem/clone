@@ -18,7 +18,21 @@ HTTP and CLI mutations call `snapshot.mutate`, which calls `workspace.dispatch_m
 
 Reads use SQL rows or assembled issue/project records. Bootstrap returns the UI data, including related records and progress. It loads active issues and projects plus separate archives. The UI refreshes bootstrap after writes.
 
-The database schema retains some column names such as `member_id` for relationships that now reference actors. Keep those names for format compatibility. Human profiles remain in `members`; actor identity is in `actors`.
+The database schema retains some names for format compatibility. Human profiles remain in `members`; actor identity is in `actors`. Use the glossary terms in UI text and documentation. Use the stored names below when reading records or sending payloads.
+
+| Stored or API name | Meaning |
+| --- | --- |
+| `members`; top-level bootstrap `members` | Human profiles |
+| `actors.member_id` | Human profile ID for a member actor; null for an agent |
+| `team_members.member_id`, `project_members.member_id` | Actor ID for a participant |
+| `issue_subscribers.member_id` | Actor ID for an issue subscriber |
+| Team/project `members`; payload `memberIds` | Participants, including members and agents |
+| `issue_statuses`; issue `status` | Team workflow statuses |
+| `issue_statuses.category`; issue `status_category` | Workflow category |
+| Project `status` | Project status |
+| `views`; routes `/api/views`; CLI `views` | Saved views |
+| `recurring_rules`; route `/api/recurring`; CLI `recurring` | Recurring rules |
+| `automations`; route `/api/automations`; CLI `automations` | Automation rules |
 
 ## Mutation flow
 

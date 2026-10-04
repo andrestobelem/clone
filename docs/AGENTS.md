@@ -1,6 +1,6 @@
 # Agent CLI guide
 
-Use the project Python 3.14 environment managed by uv. Run `uv sync` once, then run commands with `uv run python cli.py`. The CLI does not need a web server.
+Use the project Python 3.14 environment managed by uv. Run `uv sync --locked` once, then run commands with `uv run python cli.py`. The CLI does not need a web server.
 
 ## Discover and prepare
 

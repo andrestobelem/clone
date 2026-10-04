@@ -43,8 +43,9 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - Search returns active issues and projects. It matches issue identifiers, titles, descriptions, project names, summaries, and descriptions.
 - Issue lists and boards support filters, grouping, sorting, visible properties, sub-issue visibility, and empty status groups.
 - Active and completed visibility use workflow categories, including custom status names. Backlog uses the Backlog category.
+- Active excludes the Completed, Canceled, and Duplicate categories. Hiding completed issues hides all three categories. Progress counts only the Completed category.
 - Issue filters include status, priority, assignee, creator, project, project status, label, subscribers, relations, external-link presence, and due date.
-- Saved views store issue or project filters and display settings. Scope can be Personal, Workspace, or Team. Scope controls display, not access permissions.
+- Saved views store issue or project filters and display settings. Their entity is `issues` or `projects`. Scope can be Personal, Workspace, or Team. Scope controls display, not access permissions.
 - Team views lists views for the selected team. Opening an issue view with a team selects that team and displays the saved view name.
 - My issues can show assigned, created, subscribed, or actor activity records across teams.
 - Inbox supports unread filtering, individual actions, and selected-item or all-item actions for the current actor.
@@ -55,6 +56,7 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - Automation rules run for issue.created, issue.updated, and issue.completed. Conditions support priority and label names. Actions support assignment, adding a named label, and setting a named team status.
 - Automations execute in ID order. They do not recursively emit new automation events. Completion rules run after an update changes the workflow category to Completed.
 - Recurring rules support Daily, Weekly, Every 2 weeks, and Monthly. The server checks them every 30 seconds. The CLI can run them explicitly.
+- An issue's `recurringRule` field stores metadata. Only a recurring rule creates scheduled issues.
 - Scheduling uses UTC dates. A due rule creates one issue, advances past missed dates, and records actor 1. Monthly dates are clamped to the target month's last day. Later runs use that clamped date.
 - The database and complete snapshot are synchronized after successful mutations. Import replaces the complete database and attachments without events or automations.
 - The UI issue import creates new issues from an issues array. It does not restore IDs, comments, history, or attachments. The UI uses the selected team for rows without a team ID.
