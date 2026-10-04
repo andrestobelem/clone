@@ -1,0 +1,373 @@
+{
+  "format_version": 1,
+  "tables": {
+    "activity_events": {
+      "columns": [
+        "id",
+        "entity_type",
+        "entity_id",
+        "actor_id",
+        "action",
+        "payload",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "app_settings": {
+      "columns": [
+        "key",
+        "value_json",
+        "updated_at"
+      ],
+      "primary_key": [
+        "key"
+      ]
+    },
+    "automations": {
+      "columns": [
+        "id",
+        "team_id",
+        "name",
+        "trigger_json",
+        "condition_json",
+        "action_json",
+        "enabled",
+        "created_at",
+        "updated_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "comments": {
+      "columns": [
+        "id",
+        "issue_id",
+        "author_id",
+        "body",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "cycles": {
+      "columns": [
+        "id",
+        "team_id",
+        "name",
+        "starts_at",
+        "ends_at",
+        "status",
+        "capacity",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "issue_attachments": {
+      "columns": [
+        "id",
+        "issue_id",
+        "name",
+        "content_type",
+        "size",
+        "storage_name",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "issue_labels": {
+      "columns": [
+        "issue_id",
+        "label_id"
+      ],
+      "primary_key": [
+        "issue_id",
+        "label_id"
+      ]
+    },
+    "issue_relations": {
+      "columns": [
+        "id",
+        "issue_id",
+        "related_issue_id",
+        "relation_type",
+        "url"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "issue_statuses": {
+      "columns": [
+        "id",
+        "team_id",
+        "name",
+        "category",
+        "position",
+        "color",
+        "is_default"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "issue_subscribers": {
+      "columns": [
+        "issue_id",
+        "member_id"
+      ],
+      "primary_key": [
+        "issue_id",
+        "member_id"
+      ]
+    },
+    "issues": {
+      "columns": [
+        "id",
+        "identifier",
+        "number",
+        "team_id",
+        "title",
+        "description",
+        "status_id",
+        "priority",
+        "assignee_id",
+        "creator_id",
+        "project_id",
+        "cycle_id",
+        "milestone_id",
+        "due_date",
+        "estimate",
+        "parent_id",
+        "recurring_rule",
+        "external_url",
+        "created_at",
+        "updated_at",
+        "archived"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "labels": {
+      "columns": [
+        "id",
+        "name",
+        "color",
+        "team_id"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "members": {
+      "columns": [
+        "id",
+        "name",
+        "email",
+        "role",
+        "avatar_color",
+        "active",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "milestones": {
+      "columns": [
+        "id",
+        "project_id",
+        "name",
+        "due_date",
+        "status",
+        "position"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "notifications": {
+      "columns": [
+        "id",
+        "recipient_id",
+        "kind",
+        "title",
+        "body",
+        "entity_type",
+        "entity_id",
+        "is_read",
+        "archived",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "project_dependencies": {
+      "columns": [
+        "project_id",
+        "depends_on_id",
+        "dependency_type"
+      ],
+      "primary_key": [
+        "project_id",
+        "depends_on_id"
+      ]
+    },
+    "project_labels": {
+      "columns": [
+        "project_id",
+        "label_id"
+      ],
+      "primary_key": [
+        "project_id",
+        "label_id"
+      ]
+    },
+    "project_members": {
+      "columns": [
+        "project_id",
+        "member_id"
+      ],
+      "primary_key": [
+        "project_id",
+        "member_id"
+      ]
+    },
+    "project_teams": {
+      "columns": [
+        "project_id",
+        "team_id"
+      ],
+      "primary_key": [
+        "project_id",
+        "team_id"
+      ]
+    },
+    "project_updates": {
+      "columns": [
+        "id",
+        "project_id",
+        "health",
+        "body",
+        "author_id",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "projects": {
+      "columns": [
+        "id",
+        "name",
+        "summary",
+        "description",
+        "status",
+        "priority",
+        "icon",
+        "lead_id",
+        "start_date",
+        "target_date",
+        "created_at",
+        "updated_at",
+        "archived"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "recurring_rules": {
+      "columns": [
+        "id",
+        "team_id",
+        "title",
+        "description",
+        "cadence",
+        "next_run",
+        "enabled",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "team_members": {
+      "columns": [
+        "team_id",
+        "member_id",
+        "role"
+      ],
+      "primary_key": [
+        "team_id",
+        "member_id"
+      ]
+    },
+    "team_resources": {
+      "columns": [
+        "id",
+        "team_id",
+        "section",
+        "title",
+        "url"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "teams": {
+      "columns": [
+        "id",
+        "name",
+        "key",
+        "description",
+        "icon",
+        "timezone",
+        "estimate_type",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "views": {
+      "columns": [
+        "id",
+        "name",
+        "description",
+        "icon",
+        "entity",
+        "scope",
+        "owner_id",
+        "team_id",
+        "filters_json",
+        "display_json",
+        "is_favorite",
+        "created_at",
+        "updated_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    },
+    "workspace": {
+      "columns": [
+        "id",
+        "name",
+        "icon",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ]
+    }
+  }
+}

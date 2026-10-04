@@ -1,0 +1,23 @@
+{
+  "archived": 0,
+  "assignee_id": 3,
+  "created_at": "2026-09-27T18:03:44+00:00",
+  "creator_id": 1,
+  "cycle_id": 2,
+  "description": "Offer a narrower navigation layout.",
+  "due_date": "2026-10-12",
+  "estimate": null,
+  "external_url": null,
+  "id": 4,
+  "identifier": "PRO-239",
+  "milestone_id": null,
+  "number": 239,
+  "parent_id": null,
+  "priority": 1,
+  "project_id": 1,
+  "recurring_rule": null,
+  "status_id": 2,
+  "team_id": 1,
+  "title": "Add a compact sidebar density option",
+  "updated_at": "2026-10-01T18:03:44+00:00"
+}

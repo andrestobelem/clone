@@ -1,0 +1,23 @@
+{
+  "archived": 0,
+  "assignee_id": 2,
+  "created_at": "2026-09-27T18:03:44+00:00",
+  "creator_id": 1,
+  "cycle_id": 2,
+  "description": "Show blocked-by relationships in list and detail views.",
+  "due_date": null,
+  "estimate": 3.0,
+  "external_url": null,
+  "id": 12,
+  "identifier": "PRO-93",
+  "milestone_id": null,
+  "number": 93,
+  "parent_id": null,
+  "priority": 2,
+  "project_id": 1,
+  "recurring_rule": null,
+  "status_id": 1,
+  "team_id": 1,
+  "title": "Add issue dependency indicators",
+  "updated_at": "2026-09-29T18:03:44+00:00"
+}

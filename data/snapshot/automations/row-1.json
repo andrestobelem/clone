@@ -1,0 +1,11 @@
+{
+  "action_json": "{\"assignTo\": 1}",
+  "condition_json": "{\"label\": \"Bug\", \"priority\": \"Urgent\"}",
+  "created_at": "2026-10-02T18:03:44+00:00",
+  "enabled": 1,
+  "id": 1,
+  "name": "Assign urgent bugs",
+  "team_id": 1,
+  "trigger_json": "{\"event\": \"issue.created\"}",
+  "updated_at": "2026-10-02T18:03:44+00:00"
+}

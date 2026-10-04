@@ -1,0 +1,23 @@
+{
+  "archived": 0,
+  "assignee_id": 1,
+  "created_at": "2026-09-27T18:03:44+00:00",
+  "creator_id": 1,
+  "cycle_id": 2,
+  "description": "Restore the last active view on the next visit.",
+  "due_date": null,
+  "estimate": 2.0,
+  "external_url": null,
+  "id": 5,
+  "identifier": "PRO-237",
+  "milestone_id": null,
+  "number": 237,
+  "parent_id": null,
+  "priority": 2,
+  "project_id": 1,
+  "recurring_rule": null,
+  "status_id": 2,
+  "team_id": 1,
+  "title": "Remember the last selected team view",
+  "updated_at": "2026-10-01T18:03:44+00:00"
+}

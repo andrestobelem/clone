@@ -1,0 +1,23 @@
+{
+  "archived": 0,
+  "assignee_id": 4,
+  "created_at": "2026-09-27T18:03:44+00:00",
+  "creator_id": 1,
+  "cycle_id": 1,
+  "description": "Prevent cards jumping while progress data loads.",
+  "due_date": "2026-10-09",
+  "estimate": 2.0,
+  "external_url": null,
+  "id": 3,
+  "identifier": "PRO-241",
+  "milestone_id": null,
+  "number": 241,
+  "parent_id": null,
+  "priority": 2,
+  "project_id": 1,
+  "recurring_rule": null,
+  "status_id": 3,
+  "team_id": 1,
+  "title": "Fix layout shift on the project overview",
+  "updated_at": "2026-10-02T10:03:44+00:00"
+}

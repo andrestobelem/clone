@@ -1,0 +1,15 @@
+{
+  "created_at": "2026-10-02T18:03:44+00:00",
+  "description": "Active project delivery",
+  "display_json": "{\"layout\": \"Board\", \"groupBy\": \"Status\", \"orderBy\": \"Target date\"}",
+  "entity": "projects",
+  "filters_json": "{\"status\": \"In Progress\"}",
+  "icon": "✳",
+  "id": 3,
+  "is_favorite": 0,
+  "name": "Project tracking",
+  "owner_id": null,
+  "scope": "Workspace",
+  "team_id": null,
+  "updated_at": "2026-10-02T18:03:44+00:00"
+}

@@ -1,0 +1,15 @@
+{
+  "created_at": "2026-10-02T18:03:44+00:00",
+  "description": "Everything in the Product team",
+  "display_json": "{\"layout\": \"List\", \"groupBy\": \"Status\", \"orderBy\": \"Priority\"}",
+  "entity": "issues",
+  "filters_json": "{\"status\": \"all\"}",
+  "icon": "◈",
+  "id": 1,
+  "is_favorite": 1,
+  "name": "All issues",
+  "owner_id": null,
+  "scope": "Team",
+  "team_id": 1,
+  "updated_at": "2026-10-02T18:03:44+00:00"
+}

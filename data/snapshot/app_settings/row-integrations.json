@@ -1,0 +1,5 @@
+{
+  "key": "integrations",
+  "updated_at": "2026-10-02T18:03:44+00:00",
+  "value_json": "[{\"name\": \"GitHub\", \"connected\": false}, {\"name\": \"Slack\", \"connected\": false}]"
+}
