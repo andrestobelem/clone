@@ -4,7 +4,7 @@
   "description": "Review open issues before cycle planning.",
   "enabled": 1,
   "id": 1,
-  "next_run": "2026-10-05",
+  "next_run": "2026-10-12",
   "team_id": 1,
   "title": "Weekly planning reminder"
 }

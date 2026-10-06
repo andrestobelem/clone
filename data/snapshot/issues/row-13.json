@@ -1,0 +1,23 @@
+{
+  "archived": 0,
+  "assignee_id": null,
+  "created_at": "2026-10-05T00:00:27+00:00",
+  "creator_id": 1,
+  "cycle_id": null,
+  "description": "Review open issues before cycle planning.",
+  "due_date": null,
+  "estimate": null,
+  "external_url": null,
+  "id": 13,
+  "identifier": "PRO-249",
+  "milestone_id": null,
+  "number": 249,
+  "parent_id": null,
+  "priority": 4,
+  "project_id": null,
+  "recurring_rule": "{\"ruleId\": 1, \"cadence\": \"Weekly\"}",
+  "status_id": 1,
+  "team_id": 1,
+  "title": "Weekly planning reminder",
+  "updated_at": "2026-10-05T00:00:27+00:00"
+}
