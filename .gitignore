@@ -9,3 +9,5 @@ data/attachments/
 # Local synchronization state and backups
 data/.sync-*
 data/backups/
+data/local-workspace/
+dist/

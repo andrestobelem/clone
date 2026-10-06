@@ -11,6 +11,25 @@ The application uses the Python standard library. There are no third-party Pytho
 
 ## Start from this repository
 
+For personal use with no demo records, open a terminal in this directory and run:
+
+```sh
+sh start.sh
+```
+
+The script prepares Python with uv and creates an empty workspace on the first
+run. Open [http://127.0.0.1:4173](http://127.0.0.1:4173), then create a team.
+Run the same command for each later session. Stop with Ctrl+C.
+Your database, snapshots, attachments, and backups stay in
+`data/local-workspace/`. Keep that directory to keep your records.
+The recurring issue scheduler runs while the server is running.
+
+To give the application to another person, share the source files or a release
+archive. Do not include your `.venv/`, local databases, or backups. The release
+archive starts with no records. Windows is not verified.
+
+### Start with the included snapshot
+
 The repository includes a Git snapshot. If the local database does not exist, restore it before you start the server:
 
 ```sh
