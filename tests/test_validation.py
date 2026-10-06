@@ -1,5 +1,6 @@
 """Check invalid input, team changes, and HTTP storage boundaries."""
 from contextlib import closing, redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -57,7 +58,10 @@ class ValidationTests(unittest.TestCase):
         issue = sync.mutate("POST", "/api/issues", {"title": "Next source issue"})["issue"]
         self.assertEqual(issue["identifier"], "PRO-249")
         sync.mutate("POST", "/api/recurring", {"title": "Next recurring issue", "nextRun": "2000-01-01"})
-        sync.run_recurring()
+        # Keep the demo rule out of this identifier check on every test date.
+        with patch.object(ws, "datetime", wraps=datetime) as clock:
+            clock.now.return_value = datetime(2026, 10, 4, tzinfo=timezone.utc)
+            sync.run_recurring()
         with closing(ws.db()) as con:
             self.assertEqual(con.execute("SELECT identifier FROM issues WHERE title='Next recurring issue'").fetchone()[0], "PRO-250")
         self.assertTrue(sync.validate()["valid"])
