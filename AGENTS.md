@@ -22,7 +22,4 @@
 
 ## Workspace operations
 
-- Use [.agents/skills/workspace-operations/SKILL.md](.agents/skills/workspace-operations/SKILL.md) for requests to read or change workspace data.
-- Read [Agent CLI guide](docs/AGENTS.md) before you use the workspace.
-- Use the CLI for workspace actions. Do not edit SQLite or snapshot records to perform normal actions.
-- Use a registered actor ID for agent writes.
+- For any workspace record read or write, follow [.agents/skills/workspace-operations/SKILL.md](.agents/skills/workspace-operations/SKILL.md). It defines the CLI, actor identity, verification, and recovery procedure.

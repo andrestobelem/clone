@@ -5,55 +5,26 @@ description: Read or change issues, projects, teams, views, and other data in th
 
 # Workspace operations
 
-Use this skill for requests to read or change data in this repository's local issue and project workspace. Answer the user in the language they used.
+Use the workspace CLI for every record read or write. Answer the user in the language they used.
 
-## Find the workspace and CLI
+## Prepare
 
-Use the repository root as the working directory. Read the linked Agent CLI guide for the command contract and recovery steps:
+Work from the repository root. Read the [Agent CLI guide](../../../docs/AGENTS.md) before the first command in the task. Use the [CLI reference](../../../docs/CLI.md) when command discovery does not provide enough detail.
 
-- [Agent CLI guide](../../../docs/AGENTS.md)
-- [CLI reference](../../../docs/CLI.md)
+Run `uv run python cli.py describe --json`. Before a write, also run `uv run python cli.py sync status --json`. Preparation is complete when the command contract and storage state are known.
 
-Run `uv run python cli.py describe --json` to discover commands and options. Run `uv run python cli.py sync status --json` before a write. Use `--json` on commands so you can read their results and errors.
+## Select the actor
 
-Use `--db PATH` and `--sync-dir PATH` only when the task identifies a different workspace. Keep the database and snapshot paths the same for every command in one task.
+For a write, find this agent's stable actor by key. Register it only when it does not exist. Use its actor ID on every write. The Agent CLI guide defines registration, inactive actors, and actor fields. Actor selection is complete when one active actor ID is selected.
 
-## Choose an actor
+## Operate
 
-Read `uv run python cli.py actors list --json` and `uv run python cli.py agents list --all --json` when the requested action needs an actor identity. Reuse the stable actor for this agent. Find it by key; do not assume its numeric ID from an example.
+Read the current record and its related records. Use JSON output. Perform the requested action with the selected actor. Read the result after each write.
 
-If this agent has no registered identity and the requested write needs one, register it once with a stable key and name:
+The operation is complete only when the returned record contains the requested values and storage reports no error.
 
-```sh
-uv run python cli.py agents create --key codex --name Codex --json
-```
+## Recover
 
-Use the returned actor ID as `--actor ID` on each write. Keep `--actor` off read-only commands unless it changes which records are returned, such as the Inbox. Actor IDs identify the recorded actor. They do not authenticate the process.
+Follow the recovery action for the exact error category in the Agent CLI guide. A `pending_export` means the write committed; recover publication without repeating the write. A `sync_conflict` requires inspection of both sides.
 
-If the agent is inactive, do not write as it. Restore it with `agents restore ID` only when the user asked for work that requires this identity and the actor should be active again. Do not create a replacement identity just to bypass deactivation.
-
-## Read and change records
-
-Read current data before you change it. Use `teams list` and `statuses list --team-id ID` to select a valid team and workflow status. Search or list records, then use `show` with the issue identifier or numeric record ID to inspect related data.
-
-Use the shared CLI actions for writes, with the user-selected fields and registered actor:
-
-```sh
-uv run python cli.py issues create --actor ID --team-id TEAM_ID --title 'Title' --json
-uv run python cli.py issues update ISSUE_ID --actor ID --status 'In Progress' --json
-uv run python cli.py issues comment ISSUE_ID --actor ID --body 'Comment' --json
-```
-
-Use `--data @file.json` or `--data -` for a JSON payload that needs fields without flags. Flags override payload values. Use JSON `null` to clear nullable fields. Check team and project links before creating or moving an issue: every issue linked to a project must belong to one of that project's teams.
-
-Read the result after each write. Confirm the record has the requested values and that the workspace returned no error. Do not infer success from the command having started.
-
-## Recover safely
-
-- For `invalid_input`, correct the arguments or field values.
-- For `relationship_conflict`, read the affected records and use a valid active actor or relationship.
-- For `sync_conflict`, inspect `sync status` and follow the CLI guide. Do not force an import or export as a shortcut.
-- For `storage_error`, inspect storage status before retrying.
-- For `pending_export`, the change is committed. Run the stated synchronization recovery. Never repeat that write.
-
-Do not edit SQLite or snapshot files for routine actions. Do not delete a database, remove recovery files, or run import with `--force` to bypass a conflict. For older database formats, follow the migration steps in the CLI guide.
+Use the CLI recovery commands. Keep SQLite, snapshot records, and recovery files under CLI control. Recovery is complete when `sync status --json` reports a consistent state.
