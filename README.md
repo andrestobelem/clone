@@ -24,9 +24,16 @@ Your database, snapshots, attachments, and backups stay in
 `data/local-workspace/`. Keep that directory to keep your records.
 The recurring issue scheduler runs while the server is running.
 
-To give the application to another person, share the source files or a release
-archive. Do not include your `.venv/`, local databases, or backups. The release
-archive starts with no records. Windows is not verified.
+To give the application to another person, build a release archive from a clean
+commit:
+
+```sh
+sh scripts/build-release.sh
+```
+
+The script writes `dist/local-workspace-VERSION.tar.gz`. The archive excludes
+the included snapshot and starts with no records. It also excludes your local
+environment, databases, attachments, and backups. Windows is not verified.
 
 ### Start with the included snapshot
 

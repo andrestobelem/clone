@@ -24,6 +24,8 @@ uv run python -m py_compile cli.py server.py workspace.py snapshot.py validation
 
 The tests use temporary directories and loopback HTTP servers. They do not need a running application or change repository snapshots. They cover actor identities, CLI/HTTP action parity, invalid payloads, relationships, attachments, concurrent writes, stable snapshots, migration, and interrupted-operation recovery.
 
+GitHub Actions runs these checks on each pull request and each push to `main`.
+
 If Node.js 18 or later is already available, run `node --check app.js` and `node --test tests/test_ui.js`. The UI model tests cover custom workflow categories, empty groups, team views, defaults, and display toggles. Node.js is optional and is not an application dependency.
 
 Add a regression test for each behavior bug. Test results and rejected changes, including unchanged storage after failure. Do not add tests that only copy implementation details. Run the complete suite after changes to shared actions or storage.
@@ -51,5 +53,7 @@ Treat the implementation and tests as evidence for current behavior. Keep histor
 Check relative links, command help, examples, route tables, and the glossary. Run examples that write data only in temporary storage. Use valid payload fields; [the command catalog](CLI.md#discovery-and-errors) lists flags but does not describe every business requirement.
 
 Review `git diff --check`, the final diff, and `git status --short`. Preserve earlier uncommitted work. Do not include temporary storage, backups, bytecode, or browser artifacts. Use atomic Conventional Commits when commits are requested, without co-author trailers.
+
+Build a release only from a clean commit with `sh scripts/build-release.sh`. Inspect the archive before publication. Confirm that it contains no `data/snapshot/`, database, attachment, backup, or synchronization state.
 
 Report what changed, which checks passed, and any behavior that remains unverified. Do not claim full feature parity or full accessibility compliance from smoke checks.
