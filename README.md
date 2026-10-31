@@ -192,5 +192,6 @@ Tests use temporary storage. They cover CLI/HTTP parity, validation, actors, con
 - [Agent CLI guide](docs/AGENTS.md): identities and agent operations.
 - [Development guide](docs/DEVELOPMENT.md): safe setup and verification.
 - [Reference audit](docs/REFERENCE-AUDIT.md): source and limits of the original UI audit.
+- [Mission, vision, and values research](research/mission-vision-values.md): history, evidence, and application to Clone.
 
 The repository uses the [MIT license](LICENSE).
