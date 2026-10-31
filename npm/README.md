@@ -42,13 +42,21 @@ Always run the command from the same repository to reopen that workspace. `--loc
 
 ## Agent skill
 
-Install the shared Clone skill for Codex and Claude Code:
+Open the repository where the agents will use Clone. Then install the shared skill for Codex and Claude Code:
 
 ```sh
 npx skills add andrestobelem/clone --skill clone-workspace --agent codex claude-code -y
 ```
 
-The skill gives each agent a stable actor identity and a verified workflow for reads, writes, and synchronization recovery.
+The installer creates `.agents/skills/clone-workspace` for Codex, `.claude/skills/clone-workspace` for Claude Code, and `skills-lock.json` for updates.
+
+Start Clone with global storage or add `--local` for one workspace in the current repository. Then ask the agent to use Clone:
+
+```text
+Use Clone to create an issue for the login error.
+```
+
+The skill selects storage, registers a stable `codex` or `claude` actor, reads related records, verifies writes, and handles synchronization recovery. Update it with `npx skills update clone-workspace`.
 
 ## Data locations
 

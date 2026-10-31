@@ -42,13 +42,30 @@ The npm package is scoped because the unscoped `clone` name belongs to another p
 
 ### Install the agent skill
 
-Install the shared `clone-workspace` skill for Codex and Claude Code:
+Open the repository where the agents will use Clone. Install the shared `clone-workspace` skill for Codex and Claude Code:
 
 ```sh
 npx skills add andrestobelem/clone --skill clone-workspace --agent codex claude-code -y
 ```
 
-The skill teaches agents to select global or repository-local storage, register a stable actor identity, use the current CLI contract, verify writes, and recover synchronization errors. Its canonical source is [`.agents/skills/clone-workspace`](.agents/skills/clone-workspace/SKILL.md). Claude Code uses the same source through `.claude/skills/clone-workspace`.
+The installer creates `.agents/skills/clone-workspace` for Codex, `.claude/skills/clone-workspace` for Claude Code, and `skills-lock.json` for updates. Both agents use the same skill source.
+
+Start Clone with global storage or repository-local storage:
+
+```sh
+npx @andrestobelem/clone
+npx @andrestobelem/clone --local
+```
+
+Then ask the agent to use Clone:
+
+```text
+Use Clone to create an issue for the login error.
+```
+
+The skill selects the correct storage, registers `codex` or `claude` as a stable actor, reads related records before a write, verifies the result, and recovers synchronization errors. Invoke it explicitly as `$clone-workspace` when needed. Update installed skills with `npx skills update clone-workspace`.
+
+The canonical skill source is [`.agents/skills/clone-workspace`](.agents/skills/clone-workspace/SKILL.md). Claude Code uses the same source through `.claude/skills/clone-workspace`.
 
 ### Data locations
 
