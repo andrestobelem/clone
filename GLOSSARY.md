@@ -5,7 +5,7 @@ This glossary defines the core terms for the local issue and project workspace. 
 ## Workspace structure
 
 **Workspace**:
-A container for teams and members.
+A container for teams and actors. Members are the people in the workspace.
 
 **Team**:
 A group that owns issues, workflow statuses, and cycles. An issue belongs to one team. A project can link to more than one team.
@@ -42,6 +42,9 @@ A stable reference that identifies one issue in the workspace. An issue keeps th
 **Sub-issue**:
 An issue that belongs to a parent issue. Parent and sub-issue relationships form a hierarchy.
 
+**Subscriber**:
+An actor that follows an issue and receives its notifications.
+
 **Workflow status**:
 A state in a team's issue workflow.
 _Avoid_: Project status, state (when referring to an issue status)
@@ -63,6 +66,9 @@ _Avoid_: Sprint
 A checkpoint in a project with a status and an optional due date.
 
 ## Finding work
+
+**Notification**:
+A message for one actor about activity in the workspace.
 
 **Saved view**:
 A saved set of filters and display settings for issues or projects. Its scope can be personal, workspace-wide, or team-wide.
