@@ -19,12 +19,18 @@
 - Never use AI slop: filler, empty praise, vague claims, stock phrases, or needlessly complex words.
 - State concrete facts and actions. Remove text that adds no useful information.
 
+## Skills
+
+- **Domain modeling:** Read [.agents/skills/domain-modeling/SKILL.md](.agents/skills/domain-modeling/SKILL.md) when a task defines or changes domain terms, `GLOSSARY.md`, or an ADR. Reading the glossary for established terms does not require this skill.
+- **Writing for agents:** Read [.agents/skills/writing-for-agents/SKILL.md](.agents/skills/writing-for-agents/SKILL.md) when a task creates or changes a skill, `AGENTS.md`, `CLAUDE.md`, or a document reached through an agent context pointer.
+- **Design principles:** Read [.agents/skills/design-principles/SKILL.md](.agents/skills/design-principles/SKILL.md) when a task creates, refactors, or reviews component boundaries, responsibilities, interfaces, dependencies, or state access.
+- Use every skill that matches the task. Keep each skill's instructions within the task's authorized scope.
+
 ## Domain language
 
 - Read the root `GLOSSARY.md` before you change domain terms. Use its preferred terms and avoid terms listed under `_Avoid_`.
 - When a domain term or boundary is resolved, update `GLOSSARY.md` in the same change. Add only concepts that are specific to this product.
 - Keep `GLOSSARY.md` focused on domain meaning. Do not add implementation details, requirements, or open questions.
-- Use `.agents/skills/domain-modeling/SKILL.md` and its `GLOSSARY-FORMAT.md` when you need to build or change the domain model or glossary.
 
 ## Workspace operations
 

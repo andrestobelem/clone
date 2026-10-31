@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Principles"
+  short_description: "Design clear software component boundaries"
+
