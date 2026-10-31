@@ -428,30 +428,34 @@ async function attachmentPayload(fileList) {
   return Promise.all(files.map(async file=>{const bytes=new Uint8Array(await file.arrayBuffer());let binary="";for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return{name:file.name,type:file.type,data:btoa(binary)};}));
 }
 async function attachFiles(identifier,fileList) { if(!fileList?.length)return;const files=await attachmentPayload(fileList);await api("/api/issues/"+identifier+"/attachments",{method:"POST",body:{files}});await refresh();toast("Attachments added"); }
+const ACTION_HANDLERS = {
+  "new-issue": () => openIssueModal({teamId:activeTeamId,projectId:selectedProject}),
+  "new-project": () => openProjectModal(),
+  "create-view": () => openCreateView(),
+  "new-team": () => openSimpleModal("team"),
+  "new-cycle": () => openSimpleModal("cycle"),
+  "add-milestone": () => openSimpleModal("milestone"),
+  "add-project-update": () => openSimpleModal("project-update"),
+  "add-dependency": () => openSimpleModal("dependency"),
+  "add-relation": () => openSimpleModal("relation"),
+  "issue-labels": () => openLabelsModal(),
+  "add-subissue": () => openIssueModal({parentId:data.issues.find(i=>i.identifier===selectedIssue)?.id,teamId:data.issues.find(i=>i.identifier===selectedIssue)?.team_id}),
+  "add-project-issue": () => openIssueModal({projectId:Number(selectedProject),teamId:data.projects.find(p=>p.id===Number(selectedProject))?.teams[0]?.id||activeTeamId}),
+  "back": () => { selectedIssue=null;renderPage(); },
+  "back-projects": () => { selectedProject=null;renderPage(); },
+  "add-attachments": () => $("#issue-file-picker")?.click(),
+};
 async function action(action, node) {
+  const handler=ACTION_HANDLERS[action];
+  if(handler)return handler(node);
   const id=Number(node?.dataset.id||0);
-  if(action==="new-issue") return openIssueModal({teamId:activeTeamId,projectId:selectedProject});
-  if(action==="new-project") return openProjectModal();
-  if(action==="create-view") return openCreateView();
   if(action==="update-view") { if(!viewId)return;await api("/api/views/"+viewId,{method:"PATCH",body:{filters,display}});await refresh();toast("Saved view updated");return; }
   if(action==="edit-view") { const view=data.views.find(v=>v.id===id);if(view)openViewModal(view);return; }
   if(action==="new-resource") { const body=field("Title",input("title","","Resource name","text","required"),true)+field("Section",input("section","Resources","Section name"))+field("Link",input("url","","https://…","url","required"),true);openModal("Add team resource","team-resource-form",body,"Add resource");return; }
   if(action==="delete-resource") { if(!confirm("Remove this team resource?"))return;await api("/api/teams/"+activeTeamId+"/resources/"+id,{method:"DELETE",body:{}});return refresh(); }
-  if(action==="new-team") return openSimpleModal("team");
-  if(action==="new-cycle") return openSimpleModal("cycle");
-  if(action==="add-milestone") return openSimpleModal("milestone");
-  if(action==="add-project-update") return openSimpleModal("project-update");
-  if(action==="add-dependency") return openSimpleModal("dependency");
-  if(action==="add-relation") return openSimpleModal("relation");
-  if(action==="issue-labels") return openLabelsModal();
-  if(action==="add-subissue") return openIssueModal({parentId:data.issues.find(i=>i.identifier===selectedIssue)?.id,teamId:data.issues.find(i=>i.identifier===selectedIssue)?.team_id});
-  if(action==="add-project-issue") return openIssueModal({projectId:Number(selectedProject),teamId:data.projects.find(p=>p.id===Number(selectedProject))?.teams[0]?.id||activeTeamId});
-  if(action==="back") { selectedIssue=null; renderPage(); return; }
   if(action==="triage-accept") { const issue=data.issues.find(i=>i.identifier===node.dataset.issueId);if(!issue)return;const next=statuses(issue.team_id).some(s=>s.name==="Todo")?"Todo":issue.status;await api("/api/issues/"+issue.identifier,{method:"PATCH",body:{assigneeId:data.currentActorId,status:next}});await refresh();toast(issue.identifier+" assigned to you");return; }
   if(action==="restore-issue") { await api("/api/issues/"+encodeURIComponent(node.dataset.identifier)+"/restore",{method:"POST",body:{}});await refresh();toast("Issue restored");return; }
   if(action==="restore-project") { await api("/api/projects/"+id+"/restore",{method:"POST",body:{}});await refresh();toast("Project restored");return; }
-  if(action==="add-attachments") { $("#issue-file-picker")?.click();return; }
-  if(action==="back-projects") { selectedProject=null; renderPage(); return; }
   if(action==="archive-issue") { if(!confirm("Archive this issue? You can recover it from the archive later."))return;await api("/api/issues/"+selectedIssue,{method:"DELETE",body:{}});selectedIssue=null;await refresh();toast("Issue archived");return; }
   if(action==="archive-project") { if(!confirm("Archive this project?"))return;await api("/api/projects/"+selectedProject,{method:"DELETE",body:{}});selectedProject=null;await refresh();toast("Project archived");return; }
   if(action==="edit-project") return openProjectModal(data.projects.find(p=>p.id===Number(selectedProject)));
@@ -477,6 +481,18 @@ async function action(action, node) {
   if(action==="toggle-group") { node.nextElementSibling?.classList.toggle("hidden");return; }
   if(action==="issue-menu") { popover(node,["Set due date","Make recurring","Add link","Add sub-issue","Archive issue"],async pick=>{if(pick==="Add sub-issue")openIssueModal({parentId:data.issues.find(i=>i.identifier===selectedIssue)?.id,teamId:data.issues.find(i=>i.identifier===selectedIssue)?.team_id});else if(pick==="Add link")openSimpleModal("relation");else if(pick==="Make recurring"){const body=field("Issue title",input("title","","Recurring issue title","text","required"),true)+field("Description",'<textarea name="description"></textarea>',true)+field("Cadence",select("cadence",["Daily","Weekly","Every 2 weeks","Monthly"],"Weekly"))+field("Next run",input("nextRun","","","date","required"));openModal("Recurring issue","recurring-form",body,"Save recurring issue");}else if(pick==="Archive issue"){if(confirm("Archive this issue?")){await api("/api/issues/"+selectedIssue,{method:"DELETE",body:{}});selectedIssue=null;await refresh();}}else toast("Set the due date from the issue properties.");});return; }
 }
+const FORM_HANDLERS = {
+  "team-form": async f => { const res=await api("/api/teams",{method:"POST",body:f});closeModal();await refresh();activeTeamId=res.teamId;localStorage.setItem("clone-team",String(activeTeamId));setPage("Home");toast("Team created"); },
+  "milestone-form": async f => { await api("/api/projects/"+selectedProject+"/milestones",{method:"POST",body:f});closeModal();await refresh(); },
+  "project-update-form": async f => { await api("/api/projects/"+selectedProject+"/updates",{method:"POST",body:f});closeModal();await refresh();toast("Project update posted"); },
+  "dependency-form": async f => { f.dependsOnId=Number(f.dependsOnId);await api("/api/projects/"+selectedProject+"/dependencies",{method:"POST",body:f});closeModal();await refresh(); },
+  "relation-form": async f => { if(!f.relatedIssueId)delete f.relatedIssueId;await api("/api/issues/"+selectedIssue+"/relations",{method:"POST",body:f});closeModal();await refresh(); },
+  "labels-form": async f => { f.labelIds=(f.labelIds||[]).map(Number);await api("/api/issues/"+selectedIssue,{method:"PATCH",body:{labelIds:f.labelIds}});closeModal();await refresh(); },
+  "status-form": async f => { f.teamId=activeTeamId;await api("/api/statuses",{method:"POST",body:f});closeModal();await refresh(); },
+  "label-form": async f => { f.teamId=activeTeamId;await api("/api/labels",{method:"POST",body:f});closeModal();await refresh(); },
+  "recurring-form": async f => { f.teamId=activeTeamId;await api("/api/recurring",{method:"POST",body:f});closeModal();await refresh(); },
+  "comment-form": async f => { await api("/api/issues/"+selectedIssue+"/comments",{method:"POST",body:{body:f.body}});await refresh(); },
+};
 async function submitForm(form) {
   const f=formObject(form), id=form.dataset.id;
   if(form.id==="issue-form") {
@@ -487,20 +503,12 @@ async function submitForm(form) {
     const result=await api(id?"/api/projects/"+id:"/api/projects",{method:id?"PATCH":"POST",body:f});closeModal();await refresh();selectedProject=Number(id||result.projectId);renderPage();toast(id?"Project updated":"Project created");return;
   }
   if(form.id==="view-form") { f.isFavorite=!!f.isFavorite;f.teamId=f.teamId?Number(f.teamId):null;if(id){f.filters=JSON.parse(form.dataset.filters||"{}");f.display=JSON.parse(form.dataset.display||"{}");await api("/api/views/"+id,{method:"PATCH",body:f});closeModal();await refresh();if(viewId===Number(id)){const updated=data.views.find(v=>v.id===Number(id));if(updated)applyView(updated);}toast("View updated");return;}f.filters=filters;f.display=display;const result=await api("/api/views",{method:"POST",body:f});closeModal();await refresh();const v=data.views.find(x=>x.id===result.viewId);if(v)applyView(v);toast("View saved");return; }
-  if(form.id==="team-form") { const res=await api("/api/teams",{method:"POST",body:f});closeModal();await refresh();activeTeamId=res.teamId;localStorage.setItem("clone-team",String(activeTeamId));setPage("Home");toast("Team created");return; }
+  const handler=FORM_HANDLERS[form.id];
+  if(handler)return handler(f);
   if(form.id==="team-edit-form") { f.memberIds=(f.memberIds||[]).map(Number); await api("/api/teams/"+activeTeamId,{method:"PATCH",body:f});closeModal();await refresh();return; }
   if(form.id==="team-resource-form") { await api("/api/teams/"+activeTeamId+"/resources",{method:"POST",body:f});closeModal();await refresh();toast("Team resource added");return; }
   if(form.id==="cycle-form") { f.teamId=Number(f.teamId);f.capacity=Number(f.capacity);f.startsAt=new Date(f.startsAt+"T00:00:00Z").toISOString();f.endsAt=new Date(f.endsAt+"T23:59:00Z").toISOString();await api("/api/cycles",{method:"POST",body:f});closeModal();await refresh();toast("Cycle created");return; }
-  if(form.id==="milestone-form") { await api("/api/projects/"+selectedProject+"/milestones",{method:"POST",body:f});closeModal();await refresh();return; }
-  if(form.id==="project-update-form") { await api("/api/projects/"+selectedProject+"/updates",{method:"POST",body:f});closeModal();await refresh();toast("Project update posted");return; }
-  if(form.id==="dependency-form") { f.dependsOnId=Number(f.dependsOnId);await api("/api/projects/"+selectedProject+"/dependencies",{method:"POST",body:f});closeModal();await refresh();return; }
-  if(form.id==="relation-form") { if(!f.relatedIssueId)delete f.relatedIssueId;await api("/api/issues/"+selectedIssue+"/relations",{method:"POST",body:f});closeModal();await refresh();return; }
-  if(form.id==="labels-form") { f.labelIds=(f.labelIds||[]).map(Number);await api("/api/issues/"+selectedIssue,{method:"PATCH",body:{labelIds:f.labelIds}});closeModal();return refresh(); }
-  if(form.id==="status-form") { f.teamId=activeTeamId;await api("/api/statuses",{method:"POST",body:f});closeModal();return refresh(); }
-  if(form.id==="label-form") { f.teamId=activeTeamId;await api("/api/labels",{method:"POST",body:f});closeModal();return refresh(); }
-  if(form.id==="recurring-form") { f.teamId=activeTeamId;await api("/api/recurring",{method:"POST",body:f});closeModal();return refresh(); }
   if(form.id==="automation-form") { f.teamId=activeTeamId;f.trigger={event:f.event};f.condition={priority:f.priority,label:f.label};f.action={name:f.action};delete f.event;delete f.priority;delete f.label;await api("/api/automations",{method:"POST",body:f});closeModal();return refresh(); }
-  if(form.id==="comment-form") { await api("/api/issues/"+selectedIssue+"/comments",{method:"POST",body:{body:f.body}});return refresh(); }
   if(form.id==="preferences-form") { f.sidebar={Inbox:f.showInbox,"My issues":f.showMyIssues,Projects:f.showProjects,Views:f.showViews};for(const key of ["showInbox","showMyIssues","showProjects","showViews"])delete f[key];await api("/api/preferences",{method:"PATCH",body:f});await refresh();if(f.defaultHome&&currentPage!==f.defaultHome){currentPage=f.defaultHome;localStorage.setItem("clone-page",currentPage);updateShell();renderPage();}toast("Preferences saved");return; }
   if(form.id==="workspace-form") { await api("/api/settings",{method:"PATCH",body:{key:"workspace",value:f}});closeModal();await refresh();toast("Workspace settings saved");return; }
   if(form.id==="import-form") { if(!importPreview)return;const rows=importPreview.issues||importPreview;const created=await api("/api/import",{method:"POST",body:{issues:rows.map(row=>Object.assign({teamId:activeTeamId},row))}});closeModal();importPreview=null;await refresh();toast(created.count+" issues imported");return; }
