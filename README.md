@@ -40,6 +40,16 @@ Always run the command from the same repository to reopen that workspace. `--loc
 
 The npm package is scoped because the unscoped `clone` name belongs to another package. The installed executable is still named `clone`.
 
+### Install the agent skill
+
+Install the shared `clone-workspace` skill for Codex and Claude Code:
+
+```sh
+npx skills add andrestobelem/clone --skill clone-workspace --agent codex claude-code -y
+```
+
+The skill teaches agents to select global or repository-local storage, register a stable actor identity, use the current CLI contract, verify writes, and recover synchronization errors. Its canonical source is [`.agents/skills/clone-workspace`](.agents/skills/clone-workspace/SKILL.md). Claude Code uses the same source through `.claude/skills/clone-workspace`.
+
 ### Data locations
 
 The npm launcher stores workspace records outside the package and outside the current directory:

@@ -40,6 +40,16 @@ Add the directory to that repository's `.gitignore` unless you have a specific b
 
 Always run the command from the same repository to reopen that workspace. `--local` does not copy or move records from the operating system's user data directory. `--data-dir PATH` selects an explicit directory.
 
+## Agent skill
+
+Install the shared Clone skill for Codex and Claude Code:
+
+```sh
+npx skills add andrestobelem/clone --skill clone-workspace --agent codex claude-code -y
+```
+
+The skill gives each agent a stable actor identity and a verified workflow for reads, writes, and synchronization recovery.
+
 ## Data locations
 
 | System | Workspace data | Downloaded executable cache |

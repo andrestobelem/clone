@@ -2,6 +2,9 @@
 
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 const packageMetadata = require("../npm/package.json");
 const { cacheDirectory, dataDirectory, parseLauncherArguments, parseStartArguments, target } = require("../npm/bin/clone.js");
@@ -48,10 +51,38 @@ test("parses start options and validates ports", () => {
 });
 
 test("uses one version for Python and npm releases", () => {
-  const project = fs.readFileSync(require("node:path").join(__dirname, "..", "pyproject.toml"), "utf8");
+  const project = fs.readFileSync(path.join(__dirname, "..", "pyproject.toml"), "utf8");
   assert.equal(project.match(/^version = "([^"]+)"/m)[1], packageMetadata.version);
 });
 
+test("keeps first-run JSON output parseable", () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "clone-npm-test-"));
+  const binary = path.join(directory, "fake-clone");
+  const launcher = path.join(__dirname, "..", "npm", "bin", "clone.js");
+  fs.writeFileSync(binary, `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+if (args.at(-1) === "init") {
+  fs.writeFileSync(args[1], "");
+  console.log(JSON.stringify({ initialized: true }));
+} else {
+  console.log(JSON.stringify({ arguments: args }));
+}
+`);
+  fs.chmodSync(binary, 0o755);
+  try {
+    const result = spawnSync(process.execPath, [launcher, "--local", "describe", "--json"], {
+      cwd: directory,
+      encoding: "utf8",
+      env: { ...process.env, CLONE_BINARY_PATH: binary },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).arguments.slice(-2), ["describe", "--json"]);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 function pathFromWorkingDirectory(name) {
-  return require("node:path").resolve(name);
+  return path.resolve(name);
 }

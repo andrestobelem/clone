@@ -145,9 +145,13 @@ function parseStartArguments(arguments_) {
 function initialize(binary, database, storage) {
   if (fs.existsSync(database) || fs.existsSync(path.join(storage, "snapshot"))) return;
   fs.mkdirSync(storage, { recursive: true });
-  const result = spawnSync(binary, ["--db", database, "init"], { encoding: "utf8", stdio: "inherit" });
+  const result = spawnSync(binary, ["--db", database, "init"], { encoding: "utf8" });
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`Clone initialization failed with exit code ${result.status}.`);
+  if (result.status !== 0) {
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    throw new Error(`Clone initialization failed with exit code ${result.status}.`);
+  }
 }
 
 async function start(binary, arguments_, environment = process.env) {

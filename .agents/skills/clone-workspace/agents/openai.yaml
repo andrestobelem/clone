@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clone Workspace"
+  short_description: "Read and update a Clone workspace through npx"
+  default_prompt: "Use $clone-workspace to inspect and update the Clone workspace for this repository."
