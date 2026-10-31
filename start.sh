@@ -1,5 +1,5 @@
 #!/bin/sh
-# Start a separate local workspace with no demo records.
+# Start Clone from the source repository with no demo records.
 set -eu
 cd "$(dirname "$0")"
 
@@ -9,9 +9,13 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 uv sync --locked
-storage="data/local-workspace"
+storage="${CLONE_DATA_DIR:-data/clone}"
+if [ -z "${CLONE_DATA_DIR:-}" ] && [ ! -e "$storage" ] && [ -e "data/local-workspace" ]; then
+    storage="data/local-workspace"
+    echo "Using existing Clone data from $storage."
+fi
 if [ ! -e "$storage/workspace.sqlite3" ] && [ ! -e "$storage/snapshot" ]; then
     uv run python cli.py --db "$storage/workspace.sqlite3" init
 fi
-echo "Open http://127.0.0.1:${PORT:-4173} in your browser. Stop with Ctrl+C."
+echo "Open Clone at http://127.0.0.1:${PORT:-4173}. Stop with Ctrl+C."
 exec uv run python cli.py --db "$storage/workspace.sqlite3" serve

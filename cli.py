@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manage the local workspace without an HTTP server."""
+"""Manage Clone without an HTTP server."""
 from contextlib import closing
 import argparse
 import base64

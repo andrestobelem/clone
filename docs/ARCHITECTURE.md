@@ -16,6 +16,8 @@ The application runs in one local process or several cooperating local processes
 | `workspace_teams.py` | Team, workflow status, label, and resource mutations |
 | `validation.py` | Shared input types, dates, numeric bounds, and payload normalization |
 | `snapshot.py` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
+| `npm/bin/clone.js` | Platform selection, executable download, user data paths, and process launch |
+| `scripts/build-binary.py` | Standalone executable build for one operating system and architecture |
 | `tests/` | Temporary-storage checks for actions, actors, validation, snapshots, and failure recovery |
 
 HTTP and CLI mutations call `snapshot.mutate`, which calls `workspace.dispatch_mutation`. The shared validation runs before the action changes records. UI forms can apply more specific display and required-field rules.
@@ -76,3 +78,7 @@ The server scheduler runs every 30 seconds. Rules use UTC dates and actor 1. It 
 The server serves only the three UI files and explicit API routes. Attachment reads reject symbolic links and paths outside attachment storage. CLI downloads must be outside database storage and the snapshot directory.
 
 The default bind address is `127.0.0.1`. `CLONE_HOST` can change it, but the application has no authentication or permission enforcement. `PORT` changes the default port 4173. `CLONE_ACCESS_LOG=1` enables HTTP access logs. Actor identity and saved-view scope are not security boundaries.
+
+## Distribution
+
+PyInstaller embeds the Python runtime, application modules, and browser assets in one executable for each target. The npm launcher downloads the matching GitHub release asset and verifies its SHA-256 checksum. It stores the executable in the user cache directory and workspace records in the user data directory. `CLONE_CACHE_DIR`, `CLONE_DATA_DIR`, and `CLONE_BINARY_PATH` override these paths for tests and advanced use.

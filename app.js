@@ -621,6 +621,6 @@ document.addEventListener("keydown",event=>{
 });
 async function boot(){
   try{data=await api("/api/bootstrap");normalizeData();const savedTeam=Number(localStorage.getItem("clone-team"));if(data.teams.some(t=>t.id===savedTeam))activeTeamId=savedTeam;const pages={inbox:"Inbox","my-issues":"My issues",projects:"Projects",views:"Views",home:"Home",issues:"Issues","team-projects":"Team projects","team-views":"Team views",members:"Members",cycles:"Cycles",settings:"Settings",triage:"Triage",archive:"Archive"};const route=decodeURIComponent(location.hash.slice(1));if(route.startsWith("view-")){const view=data.views.find(v=>v.id===Number(route.slice(5)));if(view){updateShell();return applyView(view);}}const routePage=pages[route];const savedPage=localStorage.getItem("clone-page");const homePage=(data.settings.preferences||{}).defaultHome||"Issues";if(routePage)currentPage=routePage;else if(savedPage&&Object.values(pages).includes(savedPage))currentPage=savedPage;else if(Object.values(pages).includes(homePage))currentPage=homePage;updateShell();renderPage();}
-  catch(error){content.innerHTML='<div class="empty-state"><h2>Could not connect to the local workspace</h2><p>Start the app with <code>uv run python server.py</code>, then reload this page.</p></div>';report(error);}
+  catch(error){content.innerHTML='<div class="empty-state"><h2>Could not connect to Clone</h2><p>Start Clone, then reload this page.</p></div>';report(error);}
 }
 boot();

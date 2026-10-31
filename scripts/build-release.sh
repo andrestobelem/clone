@@ -16,8 +16,8 @@ if [ -z "$version" ]; then
     exit 1
 fi
 
-release_name="local-workspace-$version"
-stage=$(mktemp -d "${TMPDIR:-/tmp}/local-workspace-release.XXXXXX")
+release_name="clone-$version"
+stage=$(mktemp -d "${TMPDIR:-/tmp}/clone-release.XXXXXX")
 trap 'rm -rf "$stage"' EXIT HUP INT TERM
 
 mkdir -p "$stage/$release_name" dist

@@ -32,7 +32,8 @@ jobs:
       - name: Check browser JavaScript
         run: |
           node --check app.js
-          node --test tests/test_ui.js
+          node --check npm/bin/clone.js
+          node --test tests/test_ui.js tests/test_npm.js
 
       - name: Check repository diff
         run: git diff --check

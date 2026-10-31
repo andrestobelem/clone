@@ -26,7 +26,7 @@ The tests use temporary directories and loopback HTTP servers. They do not need 
 
 GitHub Actions runs these checks on each pull request and each push to `main`.
 
-If Node.js 18 or later is already available, run `node --check app.js` and `node --test tests/test_ui.js`. The UI model tests cover custom workflow categories, empty groups, team views, defaults, and display toggles. Node.js is optional and is not an application dependency.
+If Node.js 18 or later is already available, run `node --check app.js`, `node --check npm/bin/clone.js`, and `node --test tests/test_ui.js tests/test_npm.js`. The tests cover the UI model and the npm launcher. Node.js is optional for source use.
 
 Add a regression test for each behavior bug. Test results and rejected changes, including unchanged storage after failure. Do not add tests that only copy implementation details. Run the complete suite after changes to shared actions or storage.
 
@@ -55,5 +55,23 @@ Check relative links, command help, examples, route tables, and the glossary. Ru
 Review `git diff --check`, the final diff, and `git status --short`. Preserve earlier uncommitted work. Do not include temporary storage, backups, bytecode, or browser artifacts. Use atomic Conventional Commits when commits are requested, without co-author trailers.
 
 Build a release only from a clean commit with `sh scripts/build-release.sh`. Inspect the archive before publication. Confirm that it contains no `data/snapshot/`, database, attachment, backup, or synchronization state.
+
+Check the npm file list and build the executable for the current platform:
+
+```sh
+npm pack ./npm --dry-run
+uv sync --locked --group package
+uv run --group package python scripts/build-binary.py
+```
+
+Run the launcher against the local executable without a download. Use the executable name produced for the current platform:
+
+```sh
+CLONE_BINARY_PATH="$PWD/dist/bin/clone-darwin-arm64" \
+CLONE_DATA_DIR="$(mktemp -d)" \
+node npm/bin/clone.js start --no-open
+```
+
+Stop with Ctrl+C.
 
 Report what changed, which checks passed, and any behavior that remains unverified. Do not claim full feature parity or full accessibility compliance from smoke checks.

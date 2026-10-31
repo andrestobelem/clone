@@ -1,4 +1,4 @@
-"""Serve the local workspace UI and JSON API."""
+"""Serve the Clone UI and JSON API."""
 import json
 import mimetypes
 import os
@@ -14,7 +14,7 @@ import snapshot
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="LocalWorkspace/0.1"
+    server_version="Clone/0.1"
 
     def log_message(self,fmt,*args):
         if os.environ.get("CLONE_ACCESS_LOG")=="1":super().log_message(fmt,*args)
@@ -153,7 +153,7 @@ def main():
     else:
         snapshot.prepare()
     host=os.environ.get("CLONE_HOST","127.0.0.1");port=int(os.environ.get("PORT","4173"))
-    print(f"Local workspace running at http://{host}:{port} (SQLite: {workspace.DB_PATH})",flush=True)
+    print(f"Clone running at http://{host}:{port} (SQLite: {workspace.DB_PATH})",flush=True)
     threading.Thread(target=recurring_worker,name="recurring-issue-scheduler",daemon=True).start()
     ThreadingHTTPServer((host,port),Handler).serve_forever()
 

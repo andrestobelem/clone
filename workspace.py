@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local, single-user issue and project workspace backed by SQLite."""
+"""Clone domain model and SQLite storage."""
 
 from __future__ import annotations
 

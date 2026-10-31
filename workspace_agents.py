@@ -1,4 +1,4 @@
-"""Agent identity mutations for the local workspace."""
+"""Agent identity mutations for Clone."""
 
 import re
 

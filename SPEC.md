@@ -1,6 +1,6 @@
-# Local workspace product specification
+# Clone product specification
 
-This document describes the current application. It is a local, single-user workspace inspired by Linear. It does not claim complete Linear feature parity. See the [reference audit](docs/REFERENCE-AUDIT.md) for the original observations.
+This document describes Clone. It is a local, single-user workspace inspired by Linear. It does not claim complete Linear feature parity. See the [reference audit](docs/REFERENCE-AUDIT.md) for the original observations.
 
 Use the [glossary](GLOSSARY.md) for product terms. Implementation and storage contracts are in the [architecture](docs/ARCHITECTURE.md), [API](docs/API.md), and [CLI](docs/CLI.md) guides.
 

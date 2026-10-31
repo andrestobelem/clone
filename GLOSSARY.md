@@ -1,6 +1,6 @@
-# Issue and project workspace
+# Clone
 
-This glossary defines the core terms for the local issue and project workspace. It records the concepts used by the current product model.
+Clone is a local issue and project workspace. This glossary records the concepts used by its product model.
 
 ## Workspace structure
 

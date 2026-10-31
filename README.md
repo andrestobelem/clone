@@ -1,15 +1,31 @@
-# Local issue and project workspace
+# Clone
 
 A local application for issues, projects, and team planning, inspired by Linear. The browser UI, CLI, and scheduler use the same Python actions and SQLite database. People and external agents have actor identities.
 
-## Requirements
+## Run with npx
+
+Published releases include Python and all application files. Node.js 18 or later is the only requirement.
+
+```sh
+npx @andrestobelem/clone
+```
+
+The command downloads the verified executable for the current platform, creates an empty workspace on the first run, starts Clone on `127.0.0.1`, and opens the browser. Stop it with Ctrl+C. Later runs use the same records from the operating system's user data directory.
+
+Use another port or keep the browser closed when needed:
+
+```sh
+npx @andrestobelem/clone start --port 5000 --no-open
+```
+
+The npm package is scoped because the unscoped `clone` name belongs to another package. The installed executable is still named `clone`.
+
+## Run from the repository
 
 - uv and Python 3.14 on macOS or Linux.
 - A current browser with JavaScript enabled.
 
 The application uses the Python standard library. There are no third-party Python dependencies, build steps, or external services. Run `uv sync --locked` to prepare the pinned environment. Keep the server on the default loopback address. The application has no authentication.
-
-## Start from this repository
 
 For personal use with no demo records, open a terminal in this directory and run:
 
@@ -20,8 +36,10 @@ sh start.sh
 The script prepares Python with uv and creates an empty workspace on the first
 run. Open [http://127.0.0.1:4173](http://127.0.0.1:4173), then create a team.
 Run the same command for each later session. Stop with Ctrl+C.
-Your database, snapshots, attachments, and backups stay in
-`data/local-workspace/`. Keep that directory to keep your records.
+Your database, snapshots, attachments, and backups stay in `data/clone/`.
+Existing installations continue to use `data/local-workspace/` so records do
+not move without an explicit migration. Keep the selected directory to keep
+your records.
 The recurring issue scheduler runs while the server is running.
 
 To give the application to another person, build a release archive from a clean
@@ -31,9 +49,31 @@ commit:
 sh scripts/build-release.sh
 ```
 
-The script writes `dist/local-workspace-VERSION.tar.gz`. The archive excludes
+The script writes `dist/clone-VERSION.tar.gz`. The archive excludes
 the included snapshot and starts with no records. It also excludes your local
 environment, databases, attachments, and backups. Windows is not verified.
+
+## Publish a release
+
+A `vVERSION` tag runs the release workflow. It builds standalone executables for supported macOS, Linux, and Windows targets and publishes them with SHA-256 checksums in a GitHub release. The tag, `pyproject.toml`, and `npm/package.json` versions must match.
+
+The first npm release needs an authenticated bootstrap after its GitHub release exists:
+
+```sh
+npm login
+cd npm
+npm publish --access public
+```
+
+Then configure npm trusted publishing for `andrestobelem/clone` and `release.yml`. Set the GitHub repository variable `NPM_PUBLISH_ENABLED` to `true`. Later version tags publish npm through OIDC. Until this variable is set, the workflow skips npm without blocking the GitHub release.
+
+Test a package without publishing it:
+
+```sh
+npm pack ./npm --dry-run
+uv sync --locked --group package
+uv run --group package python scripts/build-binary.py
+```
 
 ### Start with the included snapshot
 
