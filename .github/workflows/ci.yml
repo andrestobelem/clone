@@ -26,7 +26,7 @@ jobs:
 
       - name: Check Python
         run: |
-          uv run python -m py_compile cli.py server.py workspace.py workspace_agents.py workspace_projects.py workspace_teams.py snapshot.py validation.py
+          uv run python -m py_compile cli.py server.py workspace.py workspace_agents.py workspace_issues.py workspace_projects.py workspace_teams.py snapshot.py validation.py
           uv run python -m unittest discover -s tests -v
 
       - name: Check browser JavaScript

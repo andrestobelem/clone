@@ -20,6 +20,7 @@ import cli
 import server
 import snapshot as sync
 import workspace as ws
+import workspace_issues
 
 
 def concurrent_issue(database, folder, title):
@@ -396,7 +397,7 @@ class WorkspaceTests(unittest.TestCase):
             ("recurring", "create", None, {"title": "Future", "nextRun": "2099-01-01"}),
         ]
         self.assertEqual({(r, a) for r, actions in cli.ACTIONS.items() if r != "agents" for a in actions}, {(r, a) for r, a, _, _ in cases})
-        with patch.object(ws, "now", return_value="2026-10-04T00:00:00+00:00"), patch.object(ws, "uuid", SimpleNamespace(uuid4=lambda: SimpleNamespace(hex="attachment-test"))):
+        with patch.object(ws, "now", return_value="2026-10-04T00:00:00+00:00"), patch.object(workspace_issues, "uuid", SimpleNamespace(uuid4=lambda: SimpleNamespace(hex="attachment-test"))):
             for n, (resource, action, ident, data) in enumerate(cases):
                 with self.subTest(resource=resource, action=action, data=data):
                     self.clone(f"cli-{n}")
