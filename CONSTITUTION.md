@@ -36,7 +36,9 @@ Product language must follow [GLOSSARY.md](GLOSSARY.md). Documentation and user-
 
 ## Decision test
 
-Before accepting a product or architecture change, answer these questions:
+Run this test before implementation when a change affects product scope, architecture, storage, identity, synchronization, security boundaries, destructive operations, or a contract shared by more than one interface. Routine changes that preserve established behavior do not require a recorded test.
+
+For each question, record `Pass`, `Not applicable`, or `Conflict`, followed by one concrete reason:
 
 1. Does the change keep workspace records under user control?
 2. Can core work still run without a hosted account or external service?
@@ -47,7 +49,7 @@ Before accepting a product or architecture change, answer these questions:
 7. Does the change serve the defined local product scope?
 8. Does it use the terms in the glossary?
 
-A proposal that fails a question must change or amend this constitution.
+A test is complete when every question has a status and evidence. Explain every `Not applicable` result. Resolve a `Conflict` by changing the proposal or amending this constitution before implementation.
 
 ## Governance
 

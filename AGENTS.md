@@ -2,9 +2,11 @@
 
 ## Product direction
 
-- Read [CONSTITUTION.md](CONSTITUTION.md) before a change affects product scope, architecture, storage, identity, synchronization, or an interface contract.
-- Use [MISSION.md](MISSION.md), [VISION.md](VISION.md), and [VALUES.md](VALUES.md) when a product decision needs purpose or priority context.
-- If a requested change conflicts with the constitution, state the conflict before implementation.
+- **Routine change:** Follow the current specification and established architecture. Product-direction documents are not required when behavior and boundaries stay unchanged.
+- **Behavior change:** Read [SPEC.md](SPEC.md) and [GLOSSARY.md](GLOSSARY.md). Update them in the same change when behavior or domain meaning changes.
+- **Product choice:** Read [MISSION.md](MISSION.md), [VISION.md](VISION.md), and [VALUES.md](VALUES.md) when a task selects product scope, direction, or priority.
+- **Constitutional change:** Read [CONSTITUTION.md](CONSTITUTION.md) and run its decision test before implementation when a task affects product scope, architecture, storage, identity, synchronization, security boundaries, destructive operations, or a shared interface contract.
+- **Conflict:** State the conflicting constitutional rule before implementation. Offer a compliant design or an explicit constitutional amendment.
 
 ## Commits
 
