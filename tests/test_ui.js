@@ -71,6 +71,16 @@ test('A workspace without teams has usable preference defaults', () => {
   assert.equal(m.run('team().name'), 'Workspace');
 });
 
+test('Settings navigation renders one selected panel', () => {
+  const m = model();
+  m.run(`data.workspace={name:'Workspace'};data.settings={preferences:{sidebar:{}},workspace:{},integrations:[]};data.recurring=[];data.automations=[];data.statuses=[];settingsSection='workspace';renderSettings();`);
+  const html = m.run('content.innerHTML');
+  assert.match(html, /data-settings-panel="workspace"/);
+  assert.match(html, /class="selected" data-action="settings-workspace"/);
+  assert.match(html, /<h2>Workspace<\/h2>/);
+  assert.doesNotMatch(html, /<h2>Preferences<\/h2>/);
+});
+
 test('Completed issues sort after open issues with custom names', () => {
   const m = model();
   m.run(`data.issues=${JSON.stringify([issue(1,'Released','Completed'),issue(2,'Building','Started')])};display.completedAtBottom=true;display.orderBy='Title';display.direction='Ascending';`);

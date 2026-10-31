@@ -50,6 +50,7 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - My issues can show assigned, created, subscribed, or actor activity records across teams.
 - Inbox supports unread filtering, individual actions, and selected-item or all-item actions for the current actor.
 - Preferences store local defaults. Theme, font size, default page, sidebar visibility, auto-assignment in the issue form, and comment submission are applied. Display-name and first-day-of-week values are stored but do not change all surfaces. System theme is displayed as Light. Spelling preference is stored but does not control browser spelling tools.
+- Settings shows one active section at a time: Preferences, Workspace, Issues & workflow, Integrations, or Import & export. Workspace and team settings open their related section.
 
 ## Automation and persistence
 
