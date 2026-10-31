@@ -1,5 +1,6 @@
 """Check CLI parity, complete snapshots, and recovery."""
 from contextlib import closing, redirect_stdout, redirect_stderr
+from datetime import date
 import io
 import json
 import multiprocessing
@@ -65,6 +66,11 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(original, self.image())
         self.assertEqual(sync.export(dry_run=True), {"added": [], "changed": [], "deleted": []})
         self.assertTrue(sync.validate()["valid"])
+
+    def test_demo_recurring_rule_starts_in_the_future(self):
+        with closing(ws.db()) as con:
+            next_run = con.execute("SELECT next_run FROM recurring_rules WHERE id=1").fetchone()[0]
+        self.assertGreater(date.fromisoformat(next_run), date.today())
 
     def test_remove_unused_tables_and_document_reference(self):
         with closing(ws.db()) as con:

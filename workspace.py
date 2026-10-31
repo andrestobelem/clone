@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local, single-user Linear-style workspace backed by SQLite."""
+"""Local, single-user issue and project workspace backed by SQLite."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from validation import mutation_payload
+from workspace_agents import mutate_agent
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
@@ -331,6 +332,7 @@ def seed(con: sqlite3.Connection) -> None:
     if con.execute("SELECT COUNT(*) FROM workspace").fetchone()[0]:
         return
     stamp = now()
+    next_recurring = (datetime.now(timezone.utc).date() + timedelta(days=7)).isoformat()
     con.execute("INSERT INTO workspace(id,name,icon,created_at) VALUES(1,?,?,?)", ("Acme Studio", "A", stamp))
     people = [
         (1, "Alex Morgan", "alex@acme.local", "Workspace admin", "#cda58f"),
@@ -416,7 +418,7 @@ def seed(con: sqlite3.Connection) -> None:
         "featureFlags":{"cycles":True,"triage":True,"automations":True,"customerRequests":False,"releases":True,"initiatives":True,"pulse":False,"asks":False},
     }
     con.executemany("INSERT INTO app_settings(key,value_json,updated_at) VALUES(?,?,?)",[(key,json.dumps(value),stamp) for key,value in settings.items()])
-    con.execute("INSERT INTO recurring_rules(team_id,title,description,cadence,next_run,enabled,created_at) VALUES(?,?,?,?,?,?,?)",(1,"Weekly planning reminder","Review open issues before cycle planning.","Weekly","2026-10-05",1,stamp))
+    con.execute("INSERT INTO recurring_rules(team_id,title,description,cadence,next_run,enabled,created_at) VALUES(?,?,?,?,?,?,?)",(1,"Weekly planning reminder","Review open issues before cycle planning.","Weekly",next_recurring,1,stamp))
     con.execute("INSERT INTO automations(team_id,name,trigger_json,condition_json,action_json,enabled,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",(1,"Assign urgent bugs",json.dumps({"event":"issue.created"}),json.dumps({"label":"Bug","priority":"Urgent"}),json.dumps({"assignTo":1}),1,stamp,stamp))
 
 
@@ -632,27 +634,9 @@ def dispatch_mutation(con,method,path,data):
     data = mutation_payload(data, path)
     actor=require_actor(con,data.get("actorId",1));stamp=now()
     validate_actor_fields(con, data, method, path)
-    if path=="/api/agents" and method=="POST":
-        key=data.get("key");name=data.get("name")
-        if not isinstance(key,str) or not key.strip():raise ValueError("Agent key is required")
-        if not isinstance(name,str) or not name.strip():raise ValueError("Agent name is required")
-        cur=con.execute("INSERT INTO actors(kind,name,key,created_at) VALUES('agent',?,?,?)",
-                        (name.strip(),key.strip(),stamp))
-        return {"agent":actor_record(con,cur.lastrowid),"_status":201}
-    agent_match=re.fullmatch(r"/api/agents/(\d+)(?:/(deactivate|restore))?",path)
-    if agent_match:
-        agent_id=int(agent_match[1])
-        target=actor_record(con,agent_id)
-        if not target or target["kind"]!="agent":raise ValueError("Agent not found")
-        if agent_match[2] and method=="POST":
-            con.execute("UPDATE actors SET active=? WHERE id=?",(int(agent_match[2]=="restore"),agent_id))
-        elif not agent_match[2] and method=="PATCH":
-            if "key" in data:raise ValueError("Agent key cannot change")
-            name=data.get("name")
-            if not isinstance(name,str) or not name.strip():raise ValueError("Agent name is required")
-            con.execute("UPDATE actors SET name=? WHERE id=?",(name.strip(),agent_id))
-        else:return {"error":"Not found","_status":404}
-        return {"agent":actor_record(con,agent_id)}
+    if path.startswith("/api/agents"):
+        result=mutate_agent(con,method,path,data,stamp,actor_record)
+        if result is not None:return result
     if path=="/api/issues" and method=="POST":
         title=str(data.get("title","")).strip()
         if not title:raise ValueError("Issue title is required")
