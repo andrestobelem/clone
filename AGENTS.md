@@ -1,5 +1,11 @@
 # Repository instructions
 
+## Product direction
+
+- Read [CONSTITUTION.md](CONSTITUTION.md) before a change affects product scope, architecture, storage, identity, synchronization, or an interface contract.
+- Use [MISSION.md](MISSION.md), [VISION.md](VISION.md), and [VALUES.md](VALUES.md) when a product decision needs purpose or priority context.
+- If a requested change conflicts with the constitution, state the conflict before implementation.
+
 ## Commits
 
 - Use Conventional Commits: `type(scope): description`. The scope is optional.

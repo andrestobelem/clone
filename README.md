@@ -180,6 +180,10 @@ Tests use temporary storage. They cover CLI/HTTP parity, validation, actors, con
 
 ## Documentation
 
+- [Constitution](CONSTITUTION.md): binding product and engineering principles.
+- [Mission](MISSION.md): the current purpose of Clone.
+- [Vision](VISION.md): the future that Clone works toward.
+- [Values](VALUES.md): standards for product and engineering choices.
 - [Product specification](SPEC.md): current behavior and product limits.
 - [Domain glossary](GLOSSARY.md): preferred product terms.
 - [Architecture](docs/ARCHITECTURE.md): components, data flow, and storage.
