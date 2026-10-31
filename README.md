@@ -20,13 +20,23 @@ Use another port or keep the browser closed when needed:
 npx @andrestobelem/clone start --port 5000 --no-open
 ```
 
-To keep one workspace beside a repository, run Clone from that repository and use local storage:
+### Use one workspace per repository
+
+Open a terminal in the repository that the workspace belongs to. Then run:
 
 ```sh
 npx @andrestobelem/clone --local
 ```
 
-This creates `.clone/` in the current directory. Add `.clone/` to that repository's `.gitignore` unless you have a specific backup workflow. Use `--data-dir PATH` to select another location.
+`--local` uses the current directory as the workspace boundary. Clone creates `.clone/` there and stores `workspace.sqlite3`, snapshots, attachments, and backups inside it. Running the same command from another repository creates a separate workspace.
+
+Add the directory to that repository's `.gitignore` unless you have a specific backup workflow:
+
+```gitignore
+.clone/
+```
+
+Always run the command from the same repository to reopen that workspace. `--local` does not copy or move records from the operating system's user data directory. Use `--data-dir PATH` when the data must be in another location.
 
 The npm package is scoped because the unscoped `clone` name belongs to another package. The installed executable is still named `clone`.
 

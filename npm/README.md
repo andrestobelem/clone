@@ -22,7 +22,23 @@ npx @andrestobelem/clone --help
 
 Use `--no-open` with `start` to keep the browser closed. Set `CLONE_DATA_DIR` to select another data directory.
 
-`--local` stores the workspace in `.clone/` in the current directory. Add `.clone/` to the repository's `.gitignore` unless you have a specific backup workflow. `--data-dir PATH` selects an explicit directory.
+## Use one workspace per repository
+
+Open a terminal in the repository that the workspace belongs to. Then run:
+
+```sh
+npx @andrestobelem/clone --local
+```
+
+`--local` uses the current directory as the workspace boundary. Clone creates `.clone/` there and stores `workspace.sqlite3`, snapshots, attachments, and backups inside it. Running the same command from another repository creates a separate workspace.
+
+Add the directory to that repository's `.gitignore` unless you have a specific backup workflow:
+
+```gitignore
+.clone/
+```
+
+Always run the command from the same repository to reopen that workspace. `--local` does not copy or move records from the operating system's user data directory. `--data-dir PATH` selects an explicit directory.
 
 ## Data locations
 
