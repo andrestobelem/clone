@@ -15,6 +15,7 @@ from pathlib import Path
 
 from validation import mutation_payload
 from workspace_agents import mutate_agent
+from workspace_projects import mutate_project
 from workspace_teams import mutate_team
 
 ROOT = Path(__file__).resolve().parent
@@ -641,6 +642,9 @@ def dispatch_mutation(con,method,path,data):
     if path.startswith(("/api/teams", "/api/statuses", "/api/labels")):
         result=mutate_team(con,method,path,data,stamp,actor,ISSUE_STATUSES)
         if result is not None:return result
+    if path.startswith("/api/projects"):
+        result=mutate_project(con,method,path,data,stamp,actor,priority_num,event)
+        if result is not None:return result
     if path=="/api/issues" and method=="POST":
         title=str(data.get("title","")).strip()
         if not title:raise ValueError("Issue title is required")
@@ -759,73 +763,6 @@ def dispatch_mutation(con,method,path,data):
         con.execute("INSERT INTO issue_relations(issue_id,related_issue_id,relation_type,url) VALUES(?,?,?,?)",(row[0],related,data.get("type","relates to"),relation_url))
         event(con,"issue",row[0],actor,"linked",{"relation":relation_id or relation_url})
         return {"issue":issue_row(con,row[0]),"_status":201}
-    if path=="/api/projects" and method=="POST":
-        name=str(data.get("name","")).strip()
-        if not name:raise ValueError("Project name is required")
-        con.execute("INSERT INTO projects(name,summary,description,status,priority,icon,lead_id,start_date,target_date,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-            (name,data.get("summary",""),data.get("description",""),data.get("status","Backlog"),priority_num(data.get("priority",4)),data.get("icon","◈"),data.get("leadId",actor),data.get("startDate"),data.get("targetDate"),stamp,stamp))
-        pid=con.execute("SELECT last_insert_rowid()").fetchone()[0]
-        for team_id in data.get("teamIds",[1]):con.execute("INSERT OR IGNORE INTO project_teams(project_id,team_id) VALUES(?,?)",(pid,int(team_id)))
-        for member_id in data.get("memberIds",[actor]):con.execute("INSERT OR IGNORE INTO project_members(project_id,member_id) VALUES(?,?)",(pid,int(member_id)))
-        for label_id in data.get("labelIds",[]):con.execute("INSERT OR IGNORE INTO project_labels(project_id,label_id) VALUES(?,?)",(pid,int(label_id)))
-        for dependency in data.get("dependencies",[]):
-            if int(dependency)!=pid:con.execute("INSERT OR IGNORE INTO project_dependencies(project_id,depends_on_id,dependency_type) VALUES(?,?,?)",(pid,int(dependency),"blocks"))
-        for pos,milestone in enumerate(data.get("milestones",[])):
-            con.execute("INSERT INTO milestones(project_id,name,due_date,status,position) VALUES(?,?,?,?,?)",(pid,milestone["name"],milestone.get("dueDate"),milestone.get("status","Todo"),pos))
-        event(con,"project",pid,actor,"created",{"name":name})
-        return {"projectId":pid,"_status":201}
-    m=re.fullmatch(r"/api/projects/(\d+)",path)
-    if m and method in ("PUT","PATCH"):
-        pid=int(m.group(1));old=con.execute("SELECT id FROM projects WHERE id=?",(pid,)).fetchone()
-        if not old:raise ValueError("Project not found")
-        if "teamIds" in data:
-            next_team_ids={int(team_id) for team_id in data["teamIds"]}
-            issue_teams={r[0] for r in con.execute("SELECT DISTINCT team_id FROM issues WHERE project_id=?",(pid,))}
-            if not issue_teams.issubset(next_team_ids):
-                raise ValueError("Move or unlink this project's issues before removing their team")
-        fields={"name":"name","summary":"summary","description":"description","status":"status","icon":"icon","leadId":"lead_id","startDate":"start_date","targetDate":"target_date"}
-        sets=[];vals=[]
-        for key,col in fields.items():
-            if key in data:sets.append(f"{col}=?");vals.append(data[key])
-        if "priority" in data:sets.append("priority=?");vals.append(priority_num(data["priority"]))
-        if sets:sets.append("updated_at=?");vals.append(stamp);vals.append(pid);con.execute(f"UPDATE projects SET {','.join(sets)} WHERE id=?",vals)
-        for key,table,column in (("teamIds","project_teams","team_id"),("memberIds","project_members","member_id"),("labelIds","project_labels","label_id")):
-            if key in data:
-                con.execute(f"DELETE FROM {table} WHERE project_id=?",(pid,))
-                for value in data[key]:con.execute(f"INSERT OR IGNORE INTO {table}(project_id,{column}) VALUES(?,?)",(pid,int(value)))
-        event(con,"project",pid,actor,"updated",data);return {"projectId":pid}
-    if re.fullmatch(r"/api/projects/(\d+)",path) and method=="DELETE":
-        pid=int(path.rsplit("/",1)[1])
-        if not con.execute("SELECT id FROM projects WHERE id=?", (pid,)).fetchone():raise ValueError("Project not found")
-        con.execute("UPDATE projects SET archived=1,updated_at=? WHERE id=?",(stamp,pid));event(con,"project",pid,actor,"archived",{});return {"ok":True}
-    m=re.fullmatch(r"/api/projects/(\d+)/restore",path)
-    if m and method=="POST":
-        pid=int(m.group(1));row=con.execute("SELECT id FROM projects WHERE id=?",(pid,)).fetchone()
-        if not row:raise ValueError("Project not found")
-        con.execute("UPDATE projects SET archived=0,updated_at=? WHERE id=?",(stamp,pid));event(con,"project",pid,actor,"restored",{})
-        return {"ok":True}
-    m=re.fullmatch(r"/api/projects/(\d+)/milestones",path)
-    if m and method=="POST":
-        pid=int(m.group(1));name=str(data.get("name","")).strip()
-        if not name:raise ValueError("Milestone name is required")
-        pos=con.execute("SELECT COUNT(*) FROM milestones WHERE project_id=?",(pid,)).fetchone()[0]
-        con.execute("INSERT INTO milestones(project_id,name,due_date,status,position) VALUES(?,?,?,?,?)",(pid,name,data.get("dueDate"),data.get("status","Todo"),pos))
-        event(con,"project",pid,actor,"milestone_created",{"name":name});return {"ok":True,"_status":201}
-    m=re.fullmatch(r"/api/projects/(\d+)/updates",path)
-    if m and method=="POST":
-        pid=int(m.group(1));body=str(data.get("body","")).strip();health=str(data.get("health","On track"))
-        if not con.execute("SELECT id FROM projects WHERE id=? AND archived=0",(pid,)).fetchone():raise ValueError("Project not found")
-        if not body:raise ValueError("Write an update before saving")
-        if health not in ("On track","At risk","Off track"):raise ValueError("Unknown project health")
-        con.execute("INSERT INTO project_updates(project_id,health,body,author_id,created_at) VALUES(?,?,?,?,?)",(pid,health,body,actor,stamp))
-        event(con,"project",pid,actor,"update_posted",{"health":health})
-        return {"ok":True,"_status":201}
-    m=re.fullmatch(r"/api/projects/(\d+)/dependencies",path)
-    if m and method=="POST":
-        pid=int(m.group(1));dependency=int(data["dependsOnId"])
-        if pid==dependency:raise ValueError("A project cannot depend on itself")
-        con.execute("INSERT OR IGNORE INTO project_dependencies(project_id,depends_on_id,dependency_type) VALUES(?,?,?)",(pid,dependency,data.get("type","blocks")))
-        event(con,"project",pid,actor,"dependency_added",{"dependsOnId":dependency});return {"ok":True,"_status":201}
     if path=="/api/views" and method=="POST":
         name=str(data.get("name","")).strip()
         if not name:raise ValueError("View name is required")

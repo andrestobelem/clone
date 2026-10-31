@@ -11,6 +11,7 @@ The application runs in one local process or several cooperating local processes
 | `cli.py` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
 | `workspace.py` | SQLite schemas, demo seed, actor and relationship checks, queries, mutations, and automations |
 | `workspace_agents.py` | Agent identity mutations |
+| `workspace_projects.py` | Project, milestone, update, and dependency mutations |
 | `workspace_teams.py` | Team, workflow status, label, and resource mutations |
 | `validation.py` | Shared input types, dates, numeric bounds, and payload normalization |
 | `snapshot.py` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
