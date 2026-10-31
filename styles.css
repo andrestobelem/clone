@@ -92,6 +92,7 @@ body{min-width:360px}
 .secondary-issue-group{padding-left:14px}.secondary-head{height:29px;font-size:10px}
 .project-chip{max-width:140px;overflow:hidden;text-overflow:ellipsis}
 .workspace-current{min-width:0;flex:1;height:35px;display:flex;align-items:center;gap:8px;padding:0 3px;border-radius:7px;text-align:left;white-space:nowrap}
+.workspace-avatar{flex:none}
 .workspace-current:hover{background:#e7e7ea}
 .sidebar.collapsed .workspace-current{justify-content:center}
 @media(max-width:1000px){.issue-row{grid-template-columns:var(--issue-columns,64px minmax(120px,1fr) 85px 70px 90px)} }
