@@ -10,6 +10,7 @@ The application runs in one local process or several cooperating local processes
 | `server.py` | Static UI files, JSON routes, attachment downloads, and recurring scheduler |
 | `cli.py` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
 | `workspace.py` | SQLite schemas, demo seed, actor and relationship checks, queries, mutations, and automations |
+| `workspace_agents.py` | Agent identity mutations |
 | `validation.py` | Shared input types, dates, numeric bounds, and payload normalization |
 | `snapshot.py` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
 | `tests/` | Temporary-storage checks for actions, actors, validation, snapshots, and failure recovery |
