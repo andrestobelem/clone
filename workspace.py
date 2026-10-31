@@ -355,7 +355,7 @@ def seed(con: sqlite3.Connection) -> None:
             con.execute("INSERT INTO issue_statuses(team_id,name,category,position,color,is_default) VALUES(?,?,?,?,?,?)", (team_id, name, category, pos, colors[name], int(name == "Backlog")))
     labels = [(1,"Feature","#7c78d8",1),(2,"Bug","#d96c68",1),(3,"Improvement","#6394d4",1),(4,"Design","#c27ad2",1),(5,"Urgent","#e3a74f",1),(6,"Accessibility","#58a88d",1),(7,"Frontend","#7496d4",1),(8,"Research","#c58e58",2)]
     con.executemany("INSERT INTO labels(id,name,color,team_id) VALUES(?,?,?,?)", labels)
-    cycles = [(1,1,"Cycle 24",ago(days=7),ago(days=-7),"Active",24,stamp),(2,1,"Cycle 25",ago(days=-7),ago(days=-21),"Upcoming",24,stamp),(3,2,"Design sprint 12",ago(days=4),ago(days=-10),"Active",18,stamp)]
+    cycles = [(1,1,"Cycle 24",ago(days=7),ago(days=-7),"Active",24,stamp),(2,1,"Cycle 25",ago(days=-7),ago(days=-21),"Upcoming",24,stamp),(3,2,"Design cycle 12",ago(days=4),ago(days=-10),"Active",18,stamp)]
     con.executemany("INSERT INTO cycles(id,team_id,name,starts_at,ends_at,status,capacity,created_at) VALUES(?,?,?,?,?,?,?,?)", cycles)
     projects = [
         (1,"Workspace foundations","Make everyday project work feel fast and clear.","Improve the core planning experience for teams.","In Progress",2,"◈",1,"2026-09-15","2026-10-18",ago(days=27),stamp),

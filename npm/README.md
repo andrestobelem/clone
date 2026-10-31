@@ -2,7 +2,7 @@
 
 Run a local issue and project workspace without installing Python.
 
-Website: <https://clone-andrestobelem-prod.web.app>
+Website: <https://clone.andrestobelem.dev>
 
 ```sh
 npx @andrestobelem/clone
@@ -30,7 +30,7 @@ Open a terminal in the repository that the workspace belongs to. Then run:
 npx @andrestobelem/clone --local
 ```
 
-`--local` uses the current directory as the workspace boundary. Clone creates `.clone/` there and stores `workspace.sqlite3`, snapshots, attachments, and backups inside it. Running the same command from another repository creates a separate workspace.
+With `--local`, the current directory determines where Clone stores data. Clone creates `.clone/` there and stores `workspace.sqlite3`, snapshots, attachments, and backups inside it. Running the same command from another repository creates a separate workspace.
 
 Add the directory to that repository's `.gitignore` unless you have a specific backup workflow:
 

@@ -55,7 +55,7 @@ The CLI, HTTP server, and scheduler share this lock. Do not use a separate lock 
 
 ## Storage and recovery
 
-Default storage is `data/workspace.sqlite3`. Attachments, backups, and `.sync-*` state files are next to the database. The default snapshot is `snapshot/` next to the database; `--sync-dir` can select another directory.
+Direct CLI use defaults to `data/workspace.sqlite3`. `start.sh` uses `data/clone/workspace.sqlite3`. The npm launcher uses the operating system's user data directory, `./.clone/` with `--local`, or the path given by `--data-dir`. Attachments, backups, and `.sync-*` state files are next to the selected database. The default snapshot is `snapshot/` next to that database; `--sync-dir` can select another directory for direct CLI use.
 
 SQLite uses foreign keys and WAL mode. Snapshots contain all supported table rows and referenced attachment bytes. IDs, timestamps, inactive actors, archives, and history are retained. The manifest describes format version 2. Format-1 import creates member actors; explicit migration upgrades an existing database.
 
@@ -81,4 +81,4 @@ The default bind address is `127.0.0.1`. `CLONE_HOST` can change it, but the app
 
 ## Distribution
 
-PyInstaller embeds the Python runtime, application modules, and browser assets in one executable for each target. The npm launcher downloads the matching GitHub release asset and verifies its SHA-256 checksum. It stores the executable in the user cache directory and workspace records in the user data directory. `CLONE_CACHE_DIR`, `CLONE_DATA_DIR`, and `CLONE_BINARY_PATH` override these paths for tests and advanced use.
+PyInstaller embeds the Python runtime, application modules, and browser assets in one executable for each target. The npm launcher downloads the matching GitHub release asset and verifies its SHA-256 checksum. It stores the executable in the user cache directory. By default, it stores workspace records in the user data directory. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory. `CLONE_CACHE_DIR`, `CLONE_DATA_DIR`, and `CLONE_BINARY_PATH` override paths for tests and advanced use.

@@ -21,7 +21,7 @@ Start the web server with `uv run python cli.py serve` or `uv run python server.
 
 Use `uv run python cli.py --help` or add `--help` to any command. Global options can appear before or after the command:
 
-- `--db PATH`: SQLite file. The default is `data/workspace.sqlite3`.
+- `--db PATH`: SQLite file. Direct CLI use defaults to `data/workspace.sqlite3`.
 - `--sync-dir PATH`: snapshot directory. The default is `snapshot/` next to the database.
 - `--actor ID`: actor who performs an action. The default is 1.
 - `--json`: JSON output and JSON errors. Structured results also use JSON by default.
@@ -82,7 +82,7 @@ uv run python cli.py settings update --key preferences --value '{"defaultHome":"
 
 ## Git workflow
 
-The web server, CLI, and recurring issue scheduler export after each change. The complete snapshot is stored in `data/snapshot/`. SQLite, local sync state, and backups stay outside Git.
+The web server, CLI, and recurring issue scheduler export after each change. With the direct CLI defaults, the complete snapshot is stored in `data/snapshot/`. SQLite, local sync state, and backups stay outside Git. Other database paths use a `snapshot/` directory next to the database unless `--sync-dir` selects another directory.
 
 ```sh
 uv run python cli.py sync status

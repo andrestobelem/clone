@@ -2,7 +2,7 @@
 
 A local application for issues, projects, and team planning, inspired by Linear. The browser UI, CLI, and scheduler use the same Python actions and SQLite database. People and external agents have actor identities.
 
-Website: <https://clone-andrestobelem-prod.web.app>
+Website: <https://clone.andrestobelem.dev>
 
 ## Run with npx
 
@@ -28,7 +28,7 @@ Open a terminal in the repository that the workspace belongs to. Then run:
 npx @andrestobelem/clone --local
 ```
 
-`--local` uses the current directory as the workspace boundary. Clone creates `.clone/` there and stores `workspace.sqlite3`, snapshots, attachments, and backups inside it. Running the same command from another repository creates a separate workspace.
+With `--local`, the current directory determines where Clone stores data. Clone creates `.clone/` there and stores `workspace.sqlite3`, snapshots, attachments, and backups inside it. Running the same command from another repository creates a separate workspace.
 
 Add the directory to that repository's `.gitignore` unless you have a specific backup workflow:
 
@@ -141,7 +141,7 @@ uv run python cli.py agents list --all --json
 
 Register each external agent once with a stable key. Use its returned actor ID on writes. Follow the [Agent CLI guide](docs/AGENTS.md) for registration and recovery. See the [CLI reference](docs/CLI.md) for commands, payloads, and the Git workflow.
 
-SQLite, attachment storage, recovery files, and backups remain local. `data/snapshot/` stores complete records and attachment bytes for Git. Review snapshot contents before committing them. UI JSON export contains application data but is not a complete backup.
+SQLite, attachment storage, recovery files, and backups remain local. The selected snapshot directory stores complete records and attachment bytes for Git. Review snapshot contents before committing them. UI JSON export contains application data but is not a complete backup.
 
 ## Verify changes
 

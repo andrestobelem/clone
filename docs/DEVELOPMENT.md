@@ -19,7 +19,7 @@ Use the CLI for workspace actions. Test fixtures can build invalid records or in
 
 ```sh
 uv run python -m unittest discover -s tests -v
-uv run python -m py_compile cli.py server.py workspace.py snapshot.py validation.py
+uv run python -m py_compile cli.py server.py workspace.py workspace_agents.py workspace_issues.py workspace_projects.py workspace_teams.py snapshot.py validation.py
 ```
 
 The tests use temporary directories and loopback HTTP servers. They do not need a running application or change repository snapshots. They cover actor identities, CLI/HTTP action parity, invalid payloads, relationships, attachments, concurrent writes, stable snapshots, migration, and interrupted-operation recovery.

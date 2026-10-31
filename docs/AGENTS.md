@@ -4,8 +4,8 @@ Use the project Python 3.14 environment managed by uv. Run `uv sync --locked` on
 
 ## Discover and prepare
 
-1. Run `uv run python cli.py describe` to read the command catalog.
-2. Run `uv run python cli.py sync status --json` to check storage.
+1. Run `uv run python cli.py describe --json` to read the command catalog.
+2. Before a write, run `uv run python cli.py sync status --json` to check storage.
 3. For a missing database with an existing snapshot, run `sync validate`, `sync import --dry-run`, then `sync import`. For a new workspace without a snapshot, run `init` or `init --demo`.
 4. For an older database, stop the web server and run `sync migrate`. Start the server again with the updated code.
 
