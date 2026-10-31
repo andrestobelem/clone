@@ -2,6 +2,8 @@
 
 A local application for issues, projects, and team planning, inspired by Linear. The browser UI, CLI, and scheduler use the same Python actions and SQLite database. People and external agents have actor identities.
 
+Website: <https://clone-andrestobelem-prod.web.app>
+
 ## Run with npx
 
 Published releases include Python and all application files. Node.js 18 or later is the only requirement.
@@ -18,7 +20,27 @@ Use another port or keep the browser closed when needed:
 npx @andrestobelem/clone start --port 5000 --no-open
 ```
 
+To keep one workspace beside a repository, run Clone from that repository and use local storage:
+
+```sh
+npx @andrestobelem/clone --local
+```
+
+This creates `.clone/` in the current directory. Add `.clone/` to that repository's `.gitignore` unless you have a specific backup workflow. Use `--data-dir PATH` to select another location.
+
 The npm package is scoped because the unscoped `clone` name belongs to another package. The installed executable is still named `clone`.
+
+### Data locations
+
+The npm launcher stores workspace records outside the package and outside the current directory:
+
+| System | Workspace data | Downloaded executable cache |
+| --- | --- | --- |
+| macOS | `~/Library/Application Support/Clone/` | `~/Library/Caches/Clone/` |
+| Linux | `$XDG_DATA_HOME/clone/` or `~/.local/share/clone/` | `$XDG_CACHE_HOME/clone/` or `~/.cache/clone/` |
+| Windows | `%APPDATA%\Clone\` | `%LOCALAPPDATA%\Clone\cache\` |
+
+The workspace data directory contains `workspace.sqlite3`, snapshots, attachments, and backups. Set `CLONE_DATA_DIR` to use another data directory. Set `CLONE_CACHE_DIR` to use another executable cache.
 
 ## Run from the repository
 
@@ -37,9 +59,7 @@ The script prepares Python with uv and creates an empty workspace on the first
 run. Open [http://127.0.0.1:4173](http://127.0.0.1:4173), then create a team.
 Run the same command for each later session. Stop with Ctrl+C.
 Your database, snapshots, attachments, and backups stay in `data/clone/`.
-Existing installations continue to use `data/local-workspace/` so records do
-not move without an explicit migration. Keep the selected directory to keep
-your records.
+Keep this directory to keep your records.
 The recurring issue scheduler runs while the server is running.
 
 To give the application to another person, build a release archive from a clean
@@ -49,23 +69,26 @@ commit:
 sh scripts/build-release.sh
 ```
 
-The script writes `dist/clone-VERSION.tar.gz`. The archive excludes
-the included snapshot and starts with no records. It also excludes your local
-environment, databases, attachments, and backups. Windows is not verified.
+The script writes `dist/clone-VERSION.tar.gz`. The archive starts with no
+records. It excludes your local environment, databases, attachments, and
+backups. Windows is not verified.
 
 ## Publish a release
 
 A `vVERSION` tag runs the release workflow. It builds standalone executables for supported macOS, Linux, and Windows targets and publishes them with SHA-256 checksums in a GitHub release. The tag, `pyproject.toml`, and `npm/package.json` versions must match.
 
-The first npm release needs an authenticated bootstrap after its GitHub release exists:
+Published versions are available on [npm](https://www.npmjs.com/package/@andrestobelem/clone) and in [GitHub Releases](https://github.com/andrestobelem/clone/releases).
+
+For a new release, update the version in `pyproject.toml` and `npm/package.json`, commit the change, and push the matching `vVERSION` tag. The release workflow builds and publishes the platform executables first. It publishes npm only when trusted publishing is configured and the `NPM_PUBLISH_ENABLED` repository variable is `true`.
+
+Until trusted publishing is enabled, publish npm after the GitHub release succeeds:
 
 ```sh
-npm login
 cd npm
-npm publish --access public
+npm publish --access public --provenance=false
 ```
 
-Then configure npm trusted publishing for `andrestobelem/clone` and `release.yml`. Set the GitHub repository variable `NPM_PUBLISH_ENABLED` to `true`. Later version tags publish npm through OIDC. Until this variable is set, the workflow skips npm without blocking the GitHub release.
+Do not set `NPM_PUBLISH_ENABLED` before npm trusted publishing is configured for repository `andrestobelem/clone` and workflow `release.yml`. The workflow skips npm without blocking the GitHub release while the variable is absent.
 
 Test a package without publishing it:
 
@@ -74,22 +97,6 @@ npm pack ./npm --dry-run
 uv sync --locked --group package
 uv run --group package python scripts/build-binary.py
 ```
-
-### Start with the included snapshot
-
-The repository includes a Git snapshot. If the local database does not exist, restore it before you start the server:
-
-```sh
-uv sync --locked
-uv run python cli.py sync validate
-uv run python cli.py sync import --dry-run
-uv run python cli.py sync import
-uv run python server.py
-```
-
-Open [http://127.0.0.1:4173](http://127.0.0.1:4173). Stop the server with Ctrl+C. Changes survive refresh and server restart.
-
-If a database already exists, use `uv run python cli.py sync status --json` to check storage. For a database from an earlier version, stop the server and run `uv run python cli.py sync migrate`. Review conflicts before you import or export. Do not delete a database to reset storage.
 
 ## Create a separate workspace
 

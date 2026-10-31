@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const test = require("node:test");
 const packageMetadata = require("../npm/package.json");
-const { cacheDirectory, dataDirectory, parseStartArguments, target } = require("../npm/bin/clone.js");
+const { cacheDirectory, dataDirectory, parseLauncherArguments, parseStartArguments, target } = require("../npm/bin/clone.js");
 
 test("selects release assets by platform", () => {
   assert.equal(target("darwin", "arm64"), "clone-darwin-arm64");
@@ -18,6 +18,25 @@ test("selects release assets by platform", () => {
 test("honors explicit cache and data directories", () => {
   assert.equal(cacheDirectory("linux", { CLONE_CACHE_DIR: "./cache" }), pathFromWorkingDirectory("cache"));
   assert.equal(dataDirectory("linux", { CLONE_DATA_DIR: "./data" }), pathFromWorkingDirectory("data"));
+});
+
+test("selects a repository-local data directory", () => {
+  const workingDirectory = pathFromWorkingDirectory("project");
+  assert.deepEqual(parseLauncherArguments(["--local", "start", "--no-open"], workingDirectory), {
+    arguments: ["start", "--no-open"],
+    storage: require("node:path").join(workingDirectory, ".clone"),
+  });
+  assert.deepEqual(parseLauncherArguments(["issues", "list", "--data-dir", "records"], workingDirectory), {
+    arguments: ["issues", "list"],
+    storage: require("node:path").join(workingDirectory, "records"),
+  });
+  assert.deepEqual(parseLauncherArguments(["--data-dir=../shared"], workingDirectory), {
+    arguments: [],
+    storage: require("node:path").resolve(workingDirectory, "../shared"),
+  });
+  assert.throws(() => parseLauncherArguments(["--local", "--data-dir", "records"]), /only one/);
+  assert.throws(() => parseLauncherArguments(["--data-dir"]), /requires a path/);
+  assert.throws(() => parseLauncherArguments(["--data-dir="]), /requires a path/);
 });
 
 test("parses start options and validates ports", () => {

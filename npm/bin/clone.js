@@ -37,11 +37,37 @@ function cacheDirectory(platform = process.platform, environment = process.env) 
   return path.join(environment.XDG_CACHE_HOME || path.join(os.homedir(), ".cache"), "clone");
 }
 
-function dataDirectory(platform = process.platform, environment = process.env) {
+function dataDirectory(platform = process.platform, environment = process.env, override = null) {
+  if (override) return path.resolve(override);
   if (environment.CLONE_DATA_DIR) return path.resolve(environment.CLONE_DATA_DIR);
   if (platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "Clone");
   if (platform === "win32") return path.join(environment.APPDATA || os.homedir(), "Clone");
   return path.join(environment.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share"), "clone");
+}
+
+function parseLauncherArguments(arguments_, workingDirectory = process.cwd()) {
+  let storage = null;
+  const forwarded = [];
+  for (let index = 0; index < arguments_.length; index += 1) {
+    const value = arguments_[index];
+    if (value === "--local") {
+      if (storage) throw new Error("Use only one data directory option.");
+      storage = path.join(workingDirectory, ".clone");
+    } else if (value === "--data-dir") {
+      if (storage) throw new Error("Use only one data directory option.");
+      const directory = arguments_[++index];
+      if (!directory) throw new Error("--data-dir requires a path.");
+      storage = path.resolve(workingDirectory, directory);
+    } else if (value.startsWith("--data-dir=")) {
+      if (storage) throw new Error("Use only one data directory option.");
+      const directory = value.slice(11);
+      if (!directory) throw new Error("--data-dir requires a path.");
+      storage = path.resolve(workingDirectory, directory);
+    } else {
+      forwarded.push(value);
+    }
+  }
+  return { arguments: forwarded, storage };
 }
 
 async function download(url, destination) {
@@ -124,14 +150,14 @@ function initialize(binary, database, storage) {
   if (result.status !== 0) throw new Error(`Clone initialization failed with exit code ${result.status}.`);
 }
 
-async function start(binary, arguments_) {
+async function start(binary, arguments_, environment = process.env) {
   const options = parseStartArguments(arguments_);
-  const storage = dataDirectory();
+  const storage = dataDirectory(process.platform, environment);
   const database = path.join(storage, "workspace.sqlite3");
   initialize(binary, database, storage);
   const url = `http://127.0.0.1:${options.port}`;
   const child = spawn(binary, ["--db", database, "serve"], {
-    env: { ...process.env, CLONE_HOST: "127.0.0.1", PORT: options.port },
+    env: { ...environment, CLONE_HOST: "127.0.0.1", PORT: options.port },
     stdio: "inherit",
   });
   const errorState = { value: null };
@@ -150,34 +176,41 @@ async function start(binary, arguments_) {
   });
 }
 
-function help() {
+function help(storage = null) {
   console.log(`Clone ${packageMetadata.version}
 
 Usage:
-  clone [start] [--port PORT] [--no-open]
-  clone <CLI command> [options]
+  clone [--local | --data-dir PATH] [start] [--port PORT] [--no-open]
+  clone [--local | --data-dir PATH] <CLI command> [options]
 
 Examples:
   npx @andrestobelem/clone
+  npx @andrestobelem/clone --local
+  npx @andrestobelem/clone --data-dir ./project-data
   npx @andrestobelem/clone start --port 5000
   npx @andrestobelem/clone teams list --json
 
-Data: ${dataDirectory()}`);
+Data: ${dataDirectory(process.platform, process.env, storage)}`);
 }
 
 async function main(arguments_ = process.argv.slice(2)) {
+  const launcher = parseLauncherArguments(arguments_);
+  arguments_ = launcher.arguments;
   if (arguments_.includes("--version") || arguments_.includes("-V")) {
     console.log(packageMetadata.version);
     return 0;
   }
   if (arguments_.includes("--help") || arguments_.includes("-h")) {
-    help();
+    help(launcher.storage);
     return 0;
   }
   const binary = await binaryPath();
   const command = arguments_[0];
-  if (!command || command === "start") return start(binary, command ? arguments_.slice(1) : arguments_);
-  const storage = dataDirectory();
+  if (!command || command === "start") {
+    const environment = launcher.storage ? { ...process.env, CLONE_DATA_DIR: launcher.storage } : process.env;
+    return start(binary, command ? arguments_.slice(1) : arguments_, environment);
+  }
+  const storage = dataDirectory(process.platform, process.env, launcher.storage);
   const database = path.join(storage, "workspace.sqlite3");
   initialize(binary, database, storage);
   const result = spawnSync(binary, ["--db", database, ...arguments_], { stdio: "inherit" });
@@ -192,4 +225,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { cacheDirectory, dataDirectory, parseStartArguments, target };
+module.exports = { cacheDirectory, dataDirectory, parseLauncherArguments, parseStartArguments, target };

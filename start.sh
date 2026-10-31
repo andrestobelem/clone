@@ -10,10 +10,6 @@ fi
 
 uv sync --locked
 storage="${CLONE_DATA_DIR:-data/clone}"
-if [ -z "${CLONE_DATA_DIR:-}" ] && [ ! -e "$storage" ] && [ -e "data/local-workspace" ]; then
-    storage="data/local-workspace"
-    echo "Using existing Clone data from $storage."
-fi
 if [ ! -e "$storage/workspace.sqlite3" ] && [ ! -e "$storage/snapshot" ]; then
     uv run python cli.py --db "$storage/workspace.sqlite3" init
 fi
