@@ -15,6 +15,7 @@ from pathlib import Path
 
 from validation import mutation_payload
 from workspace_agents import mutate_agent
+from workspace_teams import mutate_team
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
@@ -637,6 +638,9 @@ def dispatch_mutation(con,method,path,data):
     if path.startswith("/api/agents"):
         result=mutate_agent(con,method,path,data,stamp,actor_record)
         if result is not None:return result
+    if path.startswith(("/api/teams", "/api/statuses", "/api/labels")):
+        result=mutate_team(con,method,path,data,stamp,actor,ISSUE_STATUSES)
+        if result is not None:return result
     if path=="/api/issues" and method=="POST":
         title=str(data.get("title","")).strip()
         if not title:raise ValueError("Issue title is required")
@@ -848,52 +852,6 @@ def dispatch_mutation(con,method,path,data):
         con.execute("INSERT INTO cycles(team_id,name,starts_at,ends_at,status,capacity,created_at) VALUES(?,?,?,?,?,?,?)",(data.get("teamId",1),name,data["startsAt"],data["endsAt"],data.get("status","Upcoming"),float(data.get("capacity",20)),stamp))
         return {"cycleId":con.execute("SELECT last_insert_rowid()").fetchone()[0],"_status":201}
     if path=="/api/preferences" and method in ("PUT","PATCH"):update_setting(con,"preferences",{k:v for k,v in data.items() if k!="actorId"});return {"ok":True}
-    if path=="/api/teams" and method=="POST":
-        name=str(data.get("name","")).strip();key=re.sub(r"[^A-Za-z0-9]","",data.get("key") or name[:3]).upper()[:5]
-        if not name:raise ValueError("Team name is required")
-        if not key:raise ValueError("Team key must contain letters or digits")
-        con.execute("INSERT INTO teams(name,key,description,icon,created_at) VALUES(?,?,?,?,?)",(name,key,data.get("description",""),data.get("icon","✳"),stamp))
-        team_id=con.execute("SELECT last_insert_rowid()").fetchone()[0]
-        con.execute("INSERT INTO team_members(team_id,member_id,role) VALUES(?,?,?)",(team_id,actor,"Lead"))
-        for participant in data.get("memberIds",[]):
-            con.execute("INSERT OR IGNORE INTO team_members(team_id,member_id) VALUES(?,?)",(team_id,participant))
-        for pos,(status,category) in enumerate(ISSUE_STATUSES):con.execute("INSERT INTO issue_statuses(team_id,name,category,position,color,is_default) VALUES(?,?,?,?,?,?)",(team_id,status,category,pos,"#8e8e98",int(status=="Backlog")))
-        return {"teamId":team_id,"_status":201}
-    if path=="/api/statuses" and method=="POST":
-        team_id=int(data.get("teamId",1));name=str(data.get("name","")).strip();category=data.get("category","Unstarted")
-        if not name:raise ValueError("Status name is required")
-        pos=con.execute("SELECT COALESCE(MAX(position),-1)+1 FROM issue_statuses WHERE team_id=?",(team_id,)).fetchone()[0]
-        con.execute("INSERT INTO issue_statuses(team_id,name,category,position,color) VALUES(?,?,?,?,?)",(team_id,name,category,pos,data.get("color","#8989a1")))
-        return {"statusId":con.execute("SELECT last_insert_rowid()").fetchone()[0],"_status":201}
-    if path=="/api/labels" and method=="POST":
-        name=str(data.get("name","")).strip()
-        if not name:raise ValueError("Label name is required")
-        con.execute("INSERT INTO labels(name,color,team_id) VALUES(?,?,?)",(name,data.get("color","#8585cc"),data.get("teamId",1)))
-        return {"labelId":con.execute("SELECT last_insert_rowid()").fetchone()[0],"_status":201}
-    m=re.fullmatch(r"/api/teams/(\d+)",path)
-    if m and method in ("PUT","PATCH"):
-        team_id=int(m.group(1))
-        if not con.execute("SELECT id FROM teams WHERE id=?", (team_id,)).fetchone():raise ValueError("Team not found")
-        fields={"name":"name","description":"description","icon":"icon","timezone":"timezone","estimateType":"estimate_type"};sets=[];vals=[]
-        for key,column in fields.items():
-            if key in data:sets.append(f"{column}=?");vals.append(data[key])
-        if "memberIds" in data:
-            roles={r["member_id"]:r["role"] for r in con.execute("SELECT * FROM team_members WHERE team_id=?",(team_id,))}
-            con.execute("DELETE FROM team_members WHERE team_id=?",(team_id,))
-            for participant in data["memberIds"]:
-                con.execute("INSERT INTO team_members VALUES(?,?,?)",(team_id,participant,roles.get(participant,"Member")))
-        if sets:vals.append(team_id);con.execute(f"UPDATE teams SET {','.join(sets)} WHERE id=?",vals)
-        return {"ok":True}
-    m=re.fullmatch(r"/api/teams/(\d+)/resources",path)
-    if m and method=="POST":
-        team_id=int(m.group(1));title=str(data.get("title","")).strip();section=str(data.get("section","Resources")).strip() or "Resources";url=str(data.get("url","")).strip()
-        if not title:raise ValueError("Resource title is required")
-        if not re.match(r"^https?://",url,re.I):raise ValueError("Resource links must start with http:// or https://")
-        con.execute("INSERT INTO team_resources(team_id,section,title,url) VALUES(?,?,?,?)",(team_id,section,title,url))
-        return {"resourceId":con.execute("SELECT last_insert_rowid()").fetchone()[0],"_status":201}
-    m=re.fullmatch(r"/api/teams/(\d+)/resources/(\d+)",path)
-    if m and method=="DELETE":
-        con.execute("DELETE FROM team_resources WHERE team_id=? AND id=?",(int(m.group(1)),int(m.group(2))));return {"ok":True}
     m=re.fullmatch(r"/api/notifications/(\d+)/(read|unread|archive)",path)
     if m and method=="POST":
         statement="archived=1" if m.group(2)=="archive" else ("is_read=1" if m.group(2)=="read" else "is_read=0")
