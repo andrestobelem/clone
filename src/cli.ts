@@ -30,6 +30,14 @@ import {
   search,
 } from "./workspace.js";
 
+const packageVersion = String(
+  (
+    JSON.parse(
+      fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+    ) as { version: unknown }
+  ).version,
+);
+
 const resources: Record<string, string> = {
   actors: "actors",
   agents: "actors",
@@ -172,7 +180,7 @@ export async function main(argv: string[]): Promise<number> {
   const wantsJson = argv.includes("--json");
   try {
     if (argv.includes("--version") || argv.includes("-V")) {
-      console.log("0.2.1");
+      console.log(packageVersion);
       return 0;
     }
     if (argv.includes("--help") || argv.includes("-h")) {
@@ -185,6 +193,10 @@ export async function main(argv: string[]): Promise<number> {
         describe(parsed.positionals, resolveDatabasePath(parsed)),
         true,
       );
+      return 0;
+    }
+    if (parsed.command === "context") {
+      writeResult(storageContext(parsed), true);
       return 0;
     }
     const paths = resolvePaths(parsed);
@@ -426,11 +438,13 @@ function parseArguments(argv: string[]): Parsed {
     } else options[key] = value;
   }
   let command = words.shift() ?? "start";
+  validateStorageSelection(options);
   if (
     command !== "start" &&
     !resources[command] &&
     ![
       "init",
+      "context",
       "describe",
       "serve",
       "search",
@@ -439,11 +453,132 @@ function parseArguments(argv: string[]): Parsed {
       "attachments",
     ].includes(command)
   )
-    throw new InvalidInputError(`Unknown command: ${command}`);
+    throw unknownCommandError(
+      [command, ...words],
+      `Unknown command: ${command}`,
+    );
   const needsVerb =
     resources[command] || ["sync", "attachments"].includes(command);
   const verb = needsVerb ? words.shift() : undefined;
+  if (needsVerb && !isKnownVerb(command, verb))
+    throw unknownCommandError(
+      [command, ...(verb ? [verb] : []), ...words],
+      `Unknown command path: ${[command, verb].filter(Boolean).join(" ")}`,
+    );
   return { command, verb, positionals: words, options };
+}
+
+function validateStorageSelection(
+  options: Record<string, string | boolean | string[]>,
+): void {
+  const selected = [
+    options.local ? "--local" : null,
+    options.dataDir !== undefined ? "--data-dir" : null,
+    options.db !== undefined ? "--db" : null,
+  ].filter((value): value is string => value !== null);
+  if (selected.length > 1)
+    throw new InvalidInputError(
+      `Select one storage mode: ${selected.join(", ")}`,
+    );
+}
+
+function isKnownVerb(command: string, verb: string | undefined): boolean {
+  if (!verb) return false;
+  if (command === "sync")
+    return ["status", "validate", "export", "import", "migrate"].includes(verb);
+  if (command === "attachments") return verb === "get";
+  return (
+    ["list", "show"].includes(verb) ||
+    Boolean(actions[command]?.[verb]) ||
+    (command === "recurring" && verb === "run")
+  );
+}
+
+function canonicalCommandPaths(): string[][] {
+  const paths = [
+    ["init"],
+    ["context"],
+    ["describe"],
+    ["serve"],
+    ["search"],
+    ["export"],
+    ...["status", "validate", "export", "import", "migrate"].map((verb) => [
+      "sync",
+      verb,
+    ]),
+    ["attachments", "get"],
+  ];
+  for (const resource of Object.keys(resources)) {
+    paths.push([resource, "list"], [resource, "show"]);
+    for (const verb of Object.keys(actions[resource] ?? {}))
+      paths.push([resource, verb]);
+    if (resource === "recurring") paths.push(["recurring", "run"]);
+  }
+  return paths;
+}
+
+function unknownCommandError(
+  input: readonly string[],
+  baseMessage: string,
+): InvalidInputError {
+  const suggestions = commandSuggestions(input);
+  const suffix = suggestions.length
+    ? ` Did you mean: ${suggestions.join(", ")}?`
+    : "";
+  return new InvalidInputError(`${baseMessage}.${suffix}`.trim(), {
+    ...(suggestions.length ? { suggestions } : {}),
+  });
+}
+
+function commandSuggestions(input: readonly string[]): string[] {
+  const [inputCommand, inputVerb] = input;
+  return canonicalCommandPaths()
+    .map((candidate) => {
+      const [command, verb] = candidate;
+      const commandDistance = editDistance(inputCommand ?? "", command ?? "");
+      const verbDistance =
+        inputVerb && verb
+          ? editDistance(inputVerb, verb)
+          : Number.POSITIVE_INFINITY;
+      const accepted =
+        (inputCommand === command &&
+          Boolean(inputVerb && verb) &&
+          verbDistance <= 1) ||
+        (!inputVerb && commandDistance <= 2);
+      return {
+        accepted,
+        path: candidate.join(" "),
+        score: commandDistance * 4 + verbDistance,
+      };
+    })
+    .filter((candidate) => candidate.accepted)
+    .sort((left, right) =>
+      left.score === right.score
+        ? left.path.localeCompare(right.path)
+        : left.score - right.score,
+    )
+    .slice(0, 3)
+    .map((candidate) => candidate.path);
+}
+
+function editDistance(left: string, right: string): number {
+  const previous = Array.from(
+    { length: right.length + 1 },
+    (_, index) => index,
+  );
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1]! + 1,
+        previous[rightIndex]! + 1,
+        previous[rightIndex - 1]! +
+          (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length]!;
 }
 
 function resolvePaths(parsed: Parsed) {
@@ -453,6 +588,25 @@ function resolvePaths(parsed: Parsed) {
       ? path.resolve(String(parsed.options.syncDir))
       : undefined,
   );
+}
+function storageContext(parsed: Parsed) {
+  const paths = resolvePaths(parsed);
+  const storageMode = parsed.options.local
+    ? "local"
+    : parsed.options.dataDir !== undefined
+      ? "data-dir"
+      : parsed.options.db !== undefined
+        ? "database"
+        : "global";
+  return {
+    formatVersion: 1,
+    storageMode,
+    database: paths.database,
+    dataDirectory: paths.dataDirectory,
+    snapshotDirectory: paths.snapshotDirectory,
+    attachmentsDirectory: paths.attachmentsDirectory,
+    backupsDirectory: paths.backupsDirectory,
+  };
 }
 function resolveDatabasePath(parsed: Parsed): string {
   let directory: string;
@@ -577,6 +731,7 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
       },
     ],
   );
+  add(["context"]);
   add(["serve"]);
   add(
     ["search"],
@@ -693,7 +848,8 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
       )
     : commands;
   if (pathPrefix.length && selected.length === 0)
-    throw new InvalidInputError(
+    throw unknownCommandError(
+      pathPrefix,
       `Unknown command path: ${pathPrefix.join(" ")}`,
     );
   return { formatVersion: 1, commands: selected };
@@ -719,7 +875,7 @@ function argument(
 }
 function printHelp() {
   console.log(
-    `Clone 0.2.1\n\nUsage:\n  clone [--local | --data-dir PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH] <CLI command> [options]\n  clone describe [COMMAND...] [--json]`,
+    `Clone ${packageVersion}\n\nUsage:\n  clone [--local | --data-dir PATH | --db PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH | --db PATH] <CLI command> [options]\n  clone context [--json]\n  clone describe [COMMAND...] [--json]`,
   );
 }
 function writeResult(value: unknown, json: boolean) {

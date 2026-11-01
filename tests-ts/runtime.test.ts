@@ -257,15 +257,125 @@ describe("CLI contract", () => {
     expect(result.stdout).toBe("");
     expect(JSON.parse(result.stderr)).toEqual({
       code: "invalid_input",
-      message: "Unknown command path: issues missing",
+      message: "Unknown command path: issues missing.",
       exitCode: 2,
     });
+  });
+
+  it("suggests the closest canonical command path", () => {
+    const result = runTypeScript(["issues", "comments", "create", "--json"]);
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toEqual({
+      code: "invalid_input",
+      message:
+        "Unknown command path: issues comments. Did you mean: issues comment?",
+      exitCode: 2,
+      suggestions: ["issues comment"],
+    });
+
+    const text = runTypeScript(["issues", "comments", "create"]);
+    expect(text.status).toBe(2);
+    expect(text.stderr).toContain("Did you mean: issues comment?");
+  });
+
+  it("omits suggestions for unrelated command paths", () => {
+    const result = runTypeScript(["issues", "unrelated", "--json"]);
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stderr)).toEqual({
+      code: "invalid_input",
+      message: "Unknown command path: issues unrelated.",
+      exitCode: 2,
+    });
+  });
+
+  it.each([
+    ["local", ["--local"]],
+    ["data-dir", ["--data-dir", "selected-data"]],
+    ["database", ["--db", "selected.sqlite3"]],
+    ["global", []],
+  ])(
+    "reports %s storage context without creating storage",
+    (storageMode, selector) => {
+      const root = fs.realpathSync(temporaryDirectory());
+      const cwd = path.join(root, "cwd");
+      fs.mkdirSync(cwd);
+      const syncDirectory = path.join(root, "selected-snapshot");
+      const result = runTypeScript(
+        [...selector, "--sync-dir", syncDirectory, "context", "--json"],
+        {
+          cwd,
+          environment: { CLONE_DATA_DIR: path.join(root, "global-data") },
+        },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      const context = JSON.parse(result.stdout) as Record<string, unknown>;
+      const expectedDatabase =
+        storageMode === "local"
+          ? path.join(cwd, ".clone", "workspace.sqlite3")
+          : storageMode === "data-dir"
+            ? path.join(cwd, "selected-data", "workspace.sqlite3")
+            : storageMode === "database"
+              ? path.join(cwd, "selected.sqlite3")
+              : path.join(root, "global-data", "workspace.sqlite3");
+      expect(context).toEqual({
+        formatVersion: 1,
+        storageMode,
+        database: expectedDatabase,
+        dataDirectory: path.dirname(expectedDatabase),
+        snapshotDirectory: syncDirectory,
+        attachmentsDirectory: path.join(
+          path.dirname(expectedDatabase),
+          "attachments",
+        ),
+        backupsDirectory: path.join(path.dirname(expectedDatabase), "backups"),
+      });
+      expect(fs.existsSync(expectedDatabase)).toBe(false);
+      expect(fs.existsSync(syncDirectory)).toBe(false);
+    },
+  );
+
+  it.each([
+    ["--local and --data-dir", ["--local", "--data-dir", "data"]],
+    ["--local and --db", ["--local", "--db", "workspace.sqlite3"]],
+    [
+      "--data-dir and --db",
+      ["--data-dir", "data", "--db", "workspace.sqlite3"],
+    ],
+    [
+      "all storage selectors",
+      ["--local", "--data-dir", "data", "--db", "workspace.sqlite3"],
+    ],
+  ])("rejects ambiguous storage selection: %s", (_name, selector) => {
+    const root = temporaryDirectory();
+    const result = runTypeScript([...selector, "context", "--json"], {
+      cwd: root,
+    });
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      code: "invalid_input",
+      message: expect.stringContaining("Select one storage mode"),
+      exitCode: 2,
+    });
+    expect(fs.readdirSync(root)).toEqual([]);
   });
 
   it("includes filtered describe syntax in help", () => {
     const result = runTypeScript(["--help"]);
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("clone describe [COMMAND...] [--json]");
+    expect(result.stdout).toContain("clone context [--json]");
+  });
+
+  it("reads the command version from package metadata", () => {
+    const metadata = JSON.parse(fs.readFileSync("package.json", "utf8")) as {
+      version: string;
+    };
+    const version = runTypeScript(["--version"]);
+    const help = runTypeScript(["--help"]);
+    expect(version.status, version.stderr).toBe(0);
+    expect(version.stdout.trim()).toBe(metadata.version);
+    expect(help.stdout).toContain(`Clone ${metadata.version}`);
   });
 
   it("creates an agent through the command entry point", () => {

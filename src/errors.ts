@@ -11,8 +11,8 @@ export class CloneError extends Error {
 }
 
 export class InvalidInputError extends CloneError {
-  constructor(message: string) {
-    super(message, "invalid_input", 2);
+  constructor(message: string, details: Record<string, unknown> = {}) {
+    super(message, "invalid_input", 2, details);
     this.name = "InvalidInputError";
   }
 }
