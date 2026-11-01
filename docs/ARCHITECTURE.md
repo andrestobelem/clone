@@ -9,7 +9,8 @@ The application runs in one local process or several cooperating local processes
 | `index.html`, `styles.css`, `app.js` | UI shell, rendering, forms, navigation, and HTTP requests |
 | `src/server.ts` | Static UI files, JSON routes, attachment downloads, and recurring scheduler |
 | `src/cli.ts` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
-| `src/workspace.ts` | Demo data, actor and relationship checks, queries, mutations, and automations |
+| `src/actors.ts` | Actor lookup and active-actor validation |
+| `src/workspace.ts` | Demo data, relationship checks, queries, mutations, and automations |
 | `src/schema.ts` | SQLite schema and stored domain constants |
 | `src/validation.ts` | Shared input types, dates, numeric bounds, and payload normalization |
 | `src/sync.ts` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
