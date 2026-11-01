@@ -59,7 +59,7 @@ DELETE archives issues and projects. DELETE removes saved views and team resourc
 
 | Action | Fields |
 | --- | --- |
-| Register agent | Required `key`, `name`; update accepts `name`; key cannot change |
+| Register agent | Required `key`, `name`; optional `teamId` adds team participation; update accepts `name`; key cannot change |
 | Create issue | Required `title`; `teamId` defaults to 1; omitted `status` uses team default; optional `description`, `priority`, `assigneeId`, `projectId`, `cycleId`, `milestoneId`, `parentId`, `estimate`, `dueDate`, `externalUrl`, `labelIds`, `subscriberIds`, `recurringRule` |
 | Update issue | Supplied issue fields, including `teamId`; `labelIds` and `subscriberIds` replace their lists |
 | Comment | Required `body` |

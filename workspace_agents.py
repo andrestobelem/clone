@@ -7,15 +7,24 @@ def mutate_agent(con, method, path, data, stamp, actor_record):
     if path == "/api/agents" and method == "POST":
         key = data.get("key")
         name = data.get("name")
+        team_id = data.get("teamId")
         if not isinstance(key, str) or not key.strip():
             raise ValueError("Agent key is required")
         if not isinstance(name, str) or not name.strip():
             raise ValueError("Agent name is required")
+        if team_id is not None and (isinstance(team_id, bool) or not isinstance(team_id, int)):
+            raise ValueError("Team ID must be an integer")
         cursor = con.execute(
             "INSERT INTO actors(kind,name,key,created_at) VALUES('agent',?,?,?)",
             (name.strip(), key.strip(), stamp),
         )
-        return {"agent": actor_record(con, cursor.lastrowid), "_status": 201}
+        agent_id = cursor.lastrowid
+        if team_id is not None:
+            con.execute(
+                "INSERT INTO team_members(team_id,member_id,role) VALUES(?,?,?)",
+                (team_id, agent_id, "Member"),
+            )
+        return {"agent": actor_record(con, agent_id), "_status": 201}
 
     match = re.fullmatch(r"/api/agents/(\d+)(?:/(deactivate|restore))?", path)
     if not match:

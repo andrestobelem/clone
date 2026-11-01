@@ -141,6 +141,34 @@ class ActorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             sync.mutate("POST", "/api/issues", {"title": "Invalid", "actorId": True})
 
+    def test_agent_registration_adds_team_participation(self):
+        code, out, err = self.command(
+            "agents", "create", "--key", "builder", "--name", "Builder", "--team-id", "1"
+        )
+        self.assertEqual((code, err), (0, ""))
+        agent = json.loads(out)["agent"]
+        with closing(ws.db()) as con:
+            participant = con.execute(
+                "SELECT role FROM team_members WHERE team_id=? AND member_id=?",
+                (1, agent["id"]),
+            ).fetchone()
+        self.assertEqual(participant["role"], "Member")
+
+        code, out, err = self.command(
+            "agents", "create", "--key", "orphan", "--name", "Orphan", "--team-id", "999", "--json"
+        )
+        self.assertEqual((code, out, json.loads(err)["code"]), (3, "", "relationship_conflict"))
+        self.assertNotIn("orphan", [record["key"] for record in json.loads(self.command("agents", "list", "--all")[1])])
+
+    def test_agent_list_filters_team_participation(self):
+        included = self.agent("included", "Included")
+        excluded = self.agent("excluded", "Excluded")
+        sync.mutate("PATCH", "/api/teams/1", {"memberIds": [1, included["id"]]})
+        code, out, err = self.command("agents", "list", "--team-id", "1")
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual([record["id"] for record in json.loads(out)], [included["id"]])
+        self.assertNotEqual(included["id"], excluded["id"])
+
     def test_import_and_automation_keep_agent_actor(self):
         agent = self.agent()["id"]
         sync.mutate("POST", "/api/automations", {"name": "Self assign", "trigger": {"event": "issue.created"}, "action": {"name": "Assign to me"}})

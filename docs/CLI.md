@@ -133,7 +133,7 @@ uv run python -m unittest discover -s tests -v
 
 An actor is a person or an agent. Members are human profiles. `members list/show` remains read-only and returns people. `actors list/show` returns actor identities. `agents list/show` returns only agents. Add `--all` to include inactive identities.
 
-Use `agents create --key KEY --name NAME` to register an agent. Keys are unique, case-sensitive, and fixed. Outer spaces are removed at registration. `agents update ID --name NAME` changes its display name. `agents deactivate ID` blocks new writes and new assignments to that agent. `agents restore ID` enables them again. Deactivation preserves existing relations and history. Agents cannot be deleted.
+Use `agents create --key KEY --name NAME` to register an agent. Add `--team-id ID` to make the new agent a participant in one team. Keys are unique, case-sensitive, and fixed. Outer spaces are removed at registration. `agents update ID --name NAME` changes its display name. `agents deactivate ID` blocks new writes and new assignments to that agent. `agents restore ID` enables them again. Deactivation preserves existing relations and history. Agents cannot be deleted. Use `agents list --team-id ID` to list agents that participate in one team.
 
 `--actor` and `actorId` accept an actor ID. These fields also accept actor IDs: `assigneeId`, `leadId`, `memberIds`, and `subscriberIds`. Their flag names remain unchanged. For teams, `memberIds` sets participants on create or update. Creation also adds the acting actor as Lead. For projects, creation defaults the lead and participants to the acting actor. Existing inactive relations can be kept or removed during an update, but cannot be added to other records.
 

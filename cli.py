@@ -212,6 +212,9 @@ def read_resource(args):
                     if resource == "projects" and field == "team_id":
                         ids = {r[0] for r in con.execute("SELECT project_id FROM project_teams WHERE team_id=?", (wanted,))}
                         entries = [r for r in entries if r["id"] in ids]
+                    elif resource in ("actors", "agents") and field == "team_id":
+                        ids = {r[0] for r in con.execute("SELECT member_id FROM team_members WHERE team_id=?", (wanted,))}
+                        entries = [r for r in entries if r["id"] in ids]
                     else:
                         entries = [r for r in entries if r.get(field) == wanted]
             if args.status:
