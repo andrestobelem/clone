@@ -1,4 +1,5 @@
 export { actorRecord, actorRecords, requireActor } from "./actors.js";
+export { issueRow } from "./issues.js";
 export { runDueRecurring } from "./recurring.js";
 export {
   createMemberActors,
@@ -9,4 +10,4 @@ export {
 export { now } from "./time.js";
 export type { MutationResult } from "./types.js";
 export { dispatchMutation } from "./workspace-mutations.js";
-export { bootstrap, issueRow, search } from "./workspace-reads.js";
+export { bootstrap, search } from "./workspace-reads.js";

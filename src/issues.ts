@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
+import { actorRecord } from "./actors.js";
 import {
   lastInsertId,
   one,
@@ -11,6 +12,7 @@ import {
   sql,
   type Database,
 } from "./database.js";
+import { priorities } from "./schema.js";
 import type {
   JsonObject,
   JsonValue,
@@ -18,11 +20,12 @@ import type {
   Row,
   StoragePaths,
 } from "./types.js";
-import { issueRow } from "./workspace-reads.js";
 import {
   array,
   event,
   fail,
+  isObject,
+  parseJson,
   priorityNumber,
   replaceLinks,
   text,
@@ -456,4 +459,78 @@ function issueStatus(database: Database, teamId: number, name?: string): Row {
         : "Unknown workflow status",
     );
   return row;
+}
+
+export function issueRow(
+  database: Database,
+  issueId: number,
+): Record<string, unknown> | null {
+  const result = one(
+    database,
+    `SELECT i.*,t.name AS team_name,t.key AS team_key,s.name AS status,s.category AS status_category,s.color AS status_color,
+    CASE WHEN a.kind='agent' THEN a.name||' (Agent)' ELSE a.name END AS assignee,(SELECT email FROM members WHERE id=a.member_id) AS assignee_email,a.avatar_color AS assignee_color,a.kind AS assignee_kind,c.kind AS creator_kind,CASE WHEN c.kind='agent' THEN c.name||' (Agent)' ELSE c.name END AS creator,
+    p.name AS project,cy.name AS cycle,m.name AS milestone
+    FROM issues i JOIN teams t ON t.id=i.team_id JOIN issue_statuses s ON s.id=i.status_id
+    LEFT JOIN actors a ON a.id=i.assignee_id LEFT JOIN actors c ON c.id=i.creator_id
+    LEFT JOIN projects p ON p.id=i.project_id LEFT JOIN cycles cy ON cy.id=i.cycle_id LEFT JOIN milestones m ON m.id=i.milestone_id
+    WHERE i.id=?`,
+    issueId,
+  );
+  if (!result) return null;
+  const output: Record<string, unknown> = {
+    ...result,
+    priority_name: priorities[Number(result.priority)],
+  };
+  output.labels = rows(
+    database,
+    "SELECT l.id,l.name,l.color FROM labels l JOIN issue_labels il ON il.label_id=l.id WHERE il.issue_id=?",
+    issueId,
+  );
+  output.subscribers = rows(
+    database,
+    "SELECT member_id FROM issue_subscribers WHERE issue_id=?",
+    issueId,
+  ).map((row) => actorRecord(database, Number(row.member_id)));
+  output.comments = rows(
+    database,
+    "SELECT c.id,c.body,c.created_at,m.id AS author_id,CASE WHEN m.kind='agent' THEN m.name||' (Agent)' ELSE m.name END AS author,m.avatar_color FROM comments c JOIN actors m ON m.id=c.author_id WHERE c.issue_id=? ORDER BY c.id",
+    issueId,
+  );
+  output.attachments = rows(
+    database,
+    "SELECT id,name,content_type,size,created_at FROM issue_attachments WHERE issue_id=? ORDER BY id",
+    issueId,
+  );
+  output.relations = rows(
+    database,
+    "SELECT r.id,r.relation_type,r.url,i.identifier AS related_identifier,i.title AS related_title FROM issue_relations r LEFT JOIN issues i ON i.id=r.related_issue_id WHERE r.issue_id=?",
+    issueId,
+  );
+  output.subissues = rows(
+    database,
+    "SELECT id,identifier,title,status_id FROM issues WHERE parent_id=? AND archived=0",
+    issueId,
+  );
+  output.status_changed_at = result.created_at;
+  let statusFound = false;
+  output.activity = rows(
+    database,
+    "SELECT e.*,CASE WHEN m.kind='agent' THEN m.name||' (Agent)' ELSE m.name END AS actor FROM activity_events e LEFT JOIN actors m ON m.id=e.actor_id WHERE e.entity_type='issue' AND e.entity_id=? ORDER BY e.created_at DESC,e.id DESC",
+    issueId,
+  ).map((entry) => {
+    const payload = parseJson(entry.payload, {}) as Record<string, unknown>;
+    if (
+      !statusFound &&
+      ("status" in payload ||
+        (Array.isArray(payload.changes) &&
+          payload.changes.some(
+            (change) => isObject(change) && change.field === "status_id",
+          )))
+    ) {
+      output.status_changed_at = entry.created_at;
+      statusFound = true;
+    }
+    return { ...entry, payload };
+  });
+  return output;
 }

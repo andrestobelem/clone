@@ -1,3 +1,4 @@
+import { actorRecord } from "./actors.js";
 import {
   lastInsertId,
   one,
@@ -7,7 +8,8 @@ import {
   sql,
   type Database,
 } from "./database.js";
-import type { JsonObject, MutationResult } from "./types.js";
+import { priorities } from "./schema.js";
+import type { JsonObject, MutationResult, Row } from "./types.js";
 import {
   array,
   event,
@@ -224,4 +226,94 @@ export function mutateProject(
     return { ok: true, _status: 201 };
   }
   return null;
+}
+
+export function projectRecord(
+  database: Database,
+  project: Row,
+): Record<string, unknown> {
+  const id = Number(project.id);
+  const statuses = rows(
+    database,
+    "SELECT status_id,COUNT(*) AS n FROM issues WHERE project_id=? AND archived=0 GROUP BY status_id",
+    id,
+  );
+  const done = new Set(
+    rows(
+      database,
+      "SELECT id FROM issue_statuses WHERE category='Completed'",
+    ).map((r) => Number(r.id)),
+  );
+  const total = statuses.reduce((n, r) => n + Number(r.n), 0);
+  const complete = statuses
+    .filter((r) => done.has(Number(r.status_id)))
+    .reduce((n, r) => n + Number(r.n), 0);
+  const milestoneTotal = Number(
+    scalar(database, "SELECT COUNT(*) FROM milestones WHERE project_id=?", id),
+  );
+  const milestoneDone = Number(
+    scalar(
+      database,
+      "SELECT COUNT(*) FROM milestones WHERE project_id=? AND status='Done'",
+      id,
+    ),
+  );
+  const parts = [
+    total ? complete / total : null,
+    milestoneTotal ? milestoneDone / milestoneTotal : null,
+  ].filter((v): v is number => v !== null);
+  return {
+    ...project,
+    priority_name: priorities[Number(project.priority)],
+    lead: project.lead_id
+      ? actorRecord(database, Number(project.lead_id))
+      : null,
+    teams: rows(
+      database,
+      "SELECT t.id,t.name,t.key,t.icon FROM teams t JOIN project_teams pt ON pt.team_id=t.id WHERE pt.project_id=?",
+      id,
+    ),
+    members: rows(
+      database,
+      "SELECT member_id FROM project_members WHERE project_id=?",
+      id,
+    ).map((r) => actorRecord(database, Number(r.member_id))),
+    labels: rows(
+      database,
+      "SELECT l.id,l.name,l.color FROM labels l JOIN project_labels pl ON pl.label_id=l.id WHERE pl.project_id=?",
+      id,
+    ),
+    milestones: rows(
+      database,
+      "SELECT * FROM milestones WHERE project_id=? ORDER BY position,id",
+      id,
+    ),
+    updates: rows(
+      database,
+      "SELECT u.*,CASE WHEN m.kind='agent' THEN m.name||' (Agent)' ELSE m.name END AS author FROM project_updates u LEFT JOIN actors m ON m.id=u.author_id WHERE u.project_id=? ORDER BY u.created_at DESC,u.id DESC",
+      id,
+    ),
+    dependencies: rows(
+      database,
+      "SELECT d.dependency_type,p.id,p.name FROM project_dependencies d JOIN projects p ON p.id=d.depends_on_id WHERE d.project_id=?",
+      id,
+    ),
+    issue_count: total,
+    completed_count: complete,
+    milestone_count: milestoneTotal,
+    completed_milestones: milestoneDone,
+    progress: Math.round(
+      (parts.reduce((a, b) => a + b, 0) / (parts.length || 1)) * 100,
+    ),
+    issues: rows(
+      database,
+      "SELECT i.id,i.identifier,i.title,s.name AS status,i.priority FROM issues i JOIN issue_statuses s ON s.id=i.status_id WHERE i.project_id=? AND i.archived=0 ORDER BY i.updated_at DESC",
+      id,
+    ),
+    activity: rows(
+      database,
+      "SELECT e.actor_id,e.action,e.payload,e.created_at,CASE WHEN m.kind='agent' THEN m.name||' (Agent)' ELSE m.name END AS actor FROM activity_events e LEFT JOIN actors m ON m.id=e.actor_id WHERE e.entity_type='project' AND e.entity_id=? ORDER BY e.created_at DESC",
+      id,
+    ),
+  };
 }

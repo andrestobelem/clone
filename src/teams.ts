@@ -8,7 +8,7 @@ import {
   type Database,
 } from "./database.js";
 import { issueStatuses } from "./schema.js";
-import type { JsonObject, MutationResult } from "./types.js";
+import type { JsonObject, MutationResult, Row } from "./types.js";
 import {
   array,
   fail,
@@ -148,4 +148,31 @@ export function mutateTeam(
     return { ok: true };
   }
   return null;
+}
+
+export function cycleRecord(
+  database: Database,
+  cycle: Row,
+): Record<string, unknown> {
+  const stats = rows(
+    database,
+    "SELECT s.category,COUNT(*) AS total,COALESCE(SUM(COALESCE(i.estimate,0)),0) AS points FROM issues i JOIN issue_statuses s ON s.id=i.status_id WHERE i.cycle_id=? AND i.archived=0 GROUP BY s.category",
+    sql(cycle.id),
+  );
+  const count = stats.reduce((n, r) => n + Number(r.total), 0);
+  const complete = stats
+    .filter((r) => r.category === "Completed")
+    .reduce((n, r) => n + Number(r.total), 0);
+  return {
+    ...cycle,
+    issue_count: count,
+    completed_count: complete,
+    estimate_points: stats.reduce((n, r) => n + Number(r.points), 0),
+    progress: count ? Math.round((complete * 100) / count) : 0,
+    issues: rows(
+      database,
+      "SELECT identifier,title FROM issues WHERE cycle_id=? AND archived=0 ORDER BY number",
+      sql(cycle.id),
+    ),
+  };
 }

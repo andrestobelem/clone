@@ -11,12 +11,12 @@ The application runs in one local process or several cooperating local processes
 | `src/cli.ts` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
 | `src/workspace.ts` | Stable facade for workspace operations |
 | `src/seed.ts` | Schema setup, empty workspace data, and demo data |
-| `src/workspace-reads.ts` | Bootstrap data, search, and record composition |
+| `src/workspace-reads.ts` | Bootstrap aggregation and search |
 | `src/workspace-mutations.ts` | Mutation dispatch and workspace-wide mutations |
 | `src/actors.ts` | Actor lookup, validation, and agent mutations |
-| `src/teams.ts` | Team, workflow status, label, and resource mutations |
-| `src/projects.ts` | Project, milestone, update, and dependency mutations |
-| `src/issues.ts` | Issue mutations, relationships, and attachments |
+| `src/teams.ts` | Team operations and cycle composition |
+| `src/projects.ts` | Project reads and mutations |
+| `src/issues.ts` | Issue reads, mutations, relationships, and attachments |
 | `src/automations.ts` | Automation rule execution |
 | `src/recurring.ts` | Recurring rule execution and date advancement |
 | `src/workspace-helpers.ts` | Internal mutation and JSON helpers |
