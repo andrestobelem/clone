@@ -156,6 +156,7 @@ The application has one local workspace. It does not provide hosted collaboratio
 ```sh
 npx @andrestobelem/clone --help
 npx @andrestobelem/clone describe
+npx @andrestobelem/clone describe issues comment --json
 npx @andrestobelem/clone teams list --json
 npx @andrestobelem/clone agents list --all --json
 ```

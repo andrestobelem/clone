@@ -49,7 +49,7 @@ Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for inval
 | `recurring` | list, show, create, run |
 | `attachments` | get |
 | `sync` | status, export, import, validate, migrate |
-| `describe` | Command catalog in JSON |
+| `describe [COMMAND...]` | Full or filtered command catalog in JSON |
 
 Members remain read-only. CLI mutations use the same actions and validation as the API. Settings can store the rule configuration used by the existing UI. Entities that the app only reads or creates do not have update or delete commands.
 
@@ -141,7 +141,9 @@ The API adds `GET /api/actors`, `GET /api/actors/ID`, `GET /api/agents`, and `GE
 
 ## Discovery and errors
 
-`npx @andrestobelem/clone describe` returns a format-version-1 command catalog without opening storage. Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
+`npx @andrestobelem/clone describe` returns the complete format-version-1 command catalog without opening storage. Add a command path prefix to return only matching contracts. For example, `describe issues` returns all issue commands and `describe issues comment` returns one command. An unknown path returns `invalid_input`.
+
+Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
 
 With `--json`, each error is one JSON object on stderr. Stdout is empty on failure. Errors contain `code`, `message`, and `exitCode`.
 

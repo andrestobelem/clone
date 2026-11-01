@@ -173,6 +173,44 @@ describe("CLI contract", () => {
     ).toBe(true);
   });
 
+  it("filters the command catalog by path prefix", () => {
+    const group = runTypeScript(["describe", "issues", "--json"]);
+    expect(group.status, group.stderr).toBe(0);
+    const groupCatalog = JSON.parse(group.stdout) as {
+      formatVersion: number;
+      commands: Array<{ path: string[] }>;
+    };
+    expect(groupCatalog.formatVersion).toBe(1);
+    expect(groupCatalog.commands.length).toBeGreaterThan(1);
+    expect(
+      groupCatalog.commands.every((command) => command.path[0] === "issues"),
+    ).toBe(true);
+
+    const command = runTypeScript(["describe", "issues", "comment", "--json"]);
+    expect(command.status, command.stderr).toBe(0);
+    expect(JSON.parse(command.stdout)).toMatchObject({
+      formatVersion: 1,
+      commands: [{ path: ["issues", "comment"] }],
+    });
+  });
+
+  it("returns a stable JSON error for an unknown describe path", () => {
+    const result = runTypeScript(["describe", "issues", "missing", "--json"]);
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toEqual({
+      code: "invalid_input",
+      message: "Unknown command path: issues missing",
+      exitCode: 2,
+    });
+  });
+
+  it("includes filtered describe syntax in help", () => {
+    const result = runTypeScript(["--help"]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("clone describe [COMMAND...] [--json]");
+  });
+
   it("creates an agent through the command entry point", () => {
     const directory = temporaryDirectory();
     const database = path.join(directory, "workspace.sqlite3");

@@ -181,7 +181,7 @@ export async function main(argv: string[]): Promise<number> {
     }
     const parsed = parseArguments(argv);
     if (parsed.command === "describe") {
-      writeResult(describe(), true);
+      writeResult(describe(parsed.positionals), true);
       return 0;
     }
     const paths = resolvePaths(parsed);
@@ -498,8 +498,8 @@ function addFiles(payload: JsonObject, files: string[]) {
   payload.files = items;
 }
 
-function describe() {
-  const commands: unknown[] = [];
+function describe(pathPrefix: readonly string[] = []) {
+  const commands: Array<{ path: string[]; arguments: unknown[] }> = [];
   const globals = [
     argument(
       "db",
@@ -555,7 +555,23 @@ function describe() {
       ),
     ],
   );
-  add(["describe"]);
+  add(
+    ["describe"],
+    [
+      {
+        ...argument(
+          "path",
+          [],
+          "string",
+          false,
+          [],
+          undefined,
+          "Command path prefix",
+        ),
+        repeatable: true,
+      },
+    ],
+  );
   add(["serve"]);
   add(
     ["search"],
@@ -666,7 +682,16 @@ function describe() {
     }
     if (resource === "recurring") add(["recurring", "run"]);
   }
-  return { formatVersion: 1, commands };
+  const selected = pathPrefix.length
+    ? commands.filter((command) =>
+        pathPrefix.every((part, index) => command.path[index] === part),
+      )
+    : commands;
+  if (pathPrefix.length && selected.length === 0)
+    throw new InvalidInputError(
+      `Unknown command path: ${pathPrefix.join(" ")}`,
+    );
+  return { formatVersion: 1, commands: selected };
 }
 function argument(
   name: string,
@@ -689,7 +714,7 @@ function argument(
 }
 function printHelp() {
   console.log(
-    `Clone 0.2.1\n\nUsage:\n  clone [--local | --data-dir PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH] <CLI command> [options]`,
+    `Clone 0.2.1\n\nUsage:\n  clone [--local | --data-dir PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH] <CLI command> [options]\n  clone describe [COMMAND...] [--json]`,
   );
 }
 function writeResult(value: unknown, json: boolean) {

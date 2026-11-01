@@ -4,7 +4,7 @@ Use Node.js 24.15 or later. Run commands with `npx @andrestobelem/clone`. In thi
 
 ## Discover and prepare
 
-1. Run `npx @andrestobelem/clone describe --json` to read the command catalog.
+1. Run `npx @andrestobelem/clone describe COMMAND... --json` to read the contract for the command group or command you need. Run `describe --json` only when you need the complete catalog.
 2. Before a write, run `npx @andrestobelem/clone sync status --json` to check storage.
 3. For a missing database with an existing snapshot, run `sync validate`, `sync import --dry-run`, then `sync import`. For a new workspace without a snapshot, run `init` or `init --demo`.
 4. For an older database, stop the web server and run `sync migrate`. Start the server again with the updated code.

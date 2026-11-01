@@ -19,7 +19,7 @@ For a new local workspace, add `.clone/` to the repository's `.gitignore` unless
 
 ## Prepare
 
-Run `describe --json` with the selected storage mode. This command is the source of truth for current commands and flags.
+Run `describe COMMAND... --json` with the selected storage mode. Select the command group or complete command path required by the task. Run `describe --json` only when the task needs the complete catalog. Describe is the source of truth for current commands and flags.
 
 Before a write, also run `sync status --json`. Preparation is complete when the command contract and storage state are known. Keep the same storage mode for every later command.
 
