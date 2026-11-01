@@ -1,13 +1,14 @@
 # Agent CLI guide
 
-Use Node.js 24.15 or later. Run commands with `npx @andrestobelem/clone`. In this repository, run `npm ci` and use `node bin/clone.js` after `npm run build`. The CLI does not need a web server.
+Use Node.js 24.15 or later. Run agent commands with `npx --yes --loglevel=error @andrestobelem/clone`. The npm options keep stdout and stderr available for Clone JSON only. In this repository, run `npm ci` and use `node bin/clone.js` after `npm run build`. The CLI does not need a web server.
 
 ## Discover and prepare
 
-1. Run `npx @andrestobelem/clone describe COMMAND... --json` to read the contract for the command group or command you need. Run `describe --json` only when you need the complete catalog.
-2. Before a write, run `npx @andrestobelem/clone sync status --json` to check storage.
-3. For a missing database with an existing snapshot, run `sync validate`, `sync import --dry-run`, then `sync import`. For a new workspace without a snapshot, run `init` or `init --demo`.
-4. For an older database, stop the web server and run `sync migrate`. Start the server again with the updated code.
+1. Run `npx --yes --loglevel=error @andrestobelem/clone context --json` with the selected storage option. Keep the returned storage mode for the complete task.
+2. Run `npx --yes --loglevel=error @andrestobelem/clone describe COMMAND... --json` to read the contract for the command group or command you need. Run `describe --json` only when you need the complete catalog.
+3. Before a write, run `npx --yes --loglevel=error @andrestobelem/clone sync status --json` to check storage.
+4. For a missing database with an existing snapshot, run `sync validate`, `sync import --dry-run`, then `sync import`. For a new workspace without a snapshot, run `init` or `init --demo`.
+5. For an older database, stop the web server and run `sync migrate`. Start the server again with the updated code.
 
 Use `--db PATH` and `--sync-dir PATH` when the workspace uses other storage paths. All processes must use the same paths.
 
@@ -16,8 +17,8 @@ Use `--db PATH` and `--sync-dir PATH` when the workspace uses other storage path
 Run `agents list --all` and check for your fixed agent key. If the key does not exist, register it:
 
 ```sh
-npx @andrestobelem/clone agents create --key codex --name Codex --json
-npx @andrestobelem/clone actors list --json
+npx --yes --loglevel=error @andrestobelem/clone agents create --key codex --name Codex --json
+npx --yes --loglevel=error @andrestobelem/clone actors list --json
 ```
 
 Keep the returned actor ID. Use it in every mutation. Reuse this identity across executions. Registration rejects duplicate keys. Restore an inactive identity explicitly before you use it. Deactivation preserves history.
@@ -29,14 +30,14 @@ Keep the returned actor ID. Use it in every mutation. Reuse this identity across
 Query teams and workflow statuses before you create an issue. Use issue identifiers such as `PRO-248` for issue commands. Use numeric IDs for actors, projects, teams, and other records.
 
 ```sh
-npx @andrestobelem/clone teams list --json
-npx @andrestobelem/clone statuses list --team-id 1 --json
-npx @andrestobelem/clone search 'search' --scope Issues --json
-npx @andrestobelem/clone issues show PRO-248 --json
-npx @andrestobelem/clone issues create --actor 6 --team-id 1 --title 'Check search' --assignee-id 7 --json
-npx @andrestobelem/clone issues update PRO-249 --actor 6 --status 'In Progress' --json
-npx @andrestobelem/clone issues comment PRO-249 --actor 7 --body 'Checked search' --json
-npx @andrestobelem/clone issues show PRO-249 --json
+npx --yes --loglevel=error @andrestobelem/clone teams list --json
+npx --yes --loglevel=error @andrestobelem/clone statuses list --team-id 1 --json
+npx --yes --loglevel=error @andrestobelem/clone search 'search' --scope Issues --json
+npx --yes --loglevel=error @andrestobelem/clone issues show PRO-248 --json
+npx --yes --loglevel=error @andrestobelem/clone issues create --actor 6 --team-id 1 --title 'Check search' --assignee-id 7 --json
+npx --yes --loglevel=error @andrestobelem/clone issues update PRO-249 --actor 6 --status 'In Progress' --json
+npx --yes --loglevel=error @andrestobelem/clone issues comment PRO-249 --actor 7 --body 'Checked search' --json
+npx --yes --loglevel=error @andrestobelem/clone issues show PRO-249 --json
 ```
 
 Replace example IDs and identifiers with values from the workspace. Read the result after each change. For payloads, send a JSON object through stdin with `--data -`, or use `--data @file.json`. Flags override payload fields. The selected `--actor` overrides payload `actorId`; its default is 1. External agents must select their registered actor explicitly. Use JSON `null` to clear nullable fields.

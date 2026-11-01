@@ -38,6 +38,12 @@ Add the directory to that repository's `.gitignore` unless you have a specific b
 
 Always run the command from the same repository to reopen that workspace. `--local` does not copy or move records from the operating system's user data directory. Use `--data-dir PATH` when the data must be in another location.
 
+Use only one storage selector. Clone rejects combinations of `--local`, `--data-dir`, and `--db`. Inspect the resolved storage before an operation when needed:
+
+```sh
+npx @andrestobelem/clone --local context --json
+```
+
 The npm package is scoped because the unscoped `clone` name belongs to another package. The installed executable is still named `clone`.
 
 ### Install the agent skill
@@ -155,6 +161,7 @@ The application has one local workspace. It does not provide hosted collaboratio
 
 ```sh
 npx @andrestobelem/clone --help
+npx @andrestobelem/clone context --json
 npx @andrestobelem/clone describe
 npx @andrestobelem/clone describe issues comment --json
 npx @andrestobelem/clone teams list --json

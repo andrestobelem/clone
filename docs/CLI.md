@@ -28,11 +28,16 @@ Use `npx @andrestobelem/clone --help` or add `--help` to any command. Global opt
 - `--actor ID`: actor who performs an action. The default is 1.
 - `--json`: JSON output and JSON errors. Structured results also use JSON by default.
 
+Select only one of `--local`, `--data-dir`, and `--db`. Clone rejects ambiguous storage selection before it opens or creates storage. `--sync-dir` can be used with each storage mode.
+
+Run `context --json` to inspect the selected mode and the absolute database, data, snapshot, attachment, and backup paths. This command does not open or create storage.
+
 Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for invalid input, 3 for a conflict, and 4 for a storage failure. A storage error can report that a change was committed and its export is pending. Do not repeat that change. Run `sync status` or `sync export` to recover it.
 
 | Command group | Actions |
 | --- | --- |
 | `init` | Create empty storage; `--demo` adds demo records |
+| `context` | Show the resolved storage mode and paths in JSON |
 | `serve` | Start the web server and recurring scheduler |
 | `search` | Search active issues and projects |
 | `export` | Write UI JSON data to stdout |
@@ -143,9 +148,11 @@ The API adds `GET /api/actors`, `GET /api/actors/ID`, `GET /api/agents`, and `GE
 
 ## Discovery and errors
 
-`npx @andrestobelem/clone describe` returns the complete format-version-1 command catalog without opening storage. Add a command path prefix to return only matching contracts. For example, `describe issues` returns all issue commands and `describe issues comment` returns one command. An unknown path returns `invalid_input`.
+`npx @andrestobelem/clone describe` returns the complete format-version-1 command catalog without opening storage. Add a command path prefix to return only matching contracts. For example, `describe issues` returns all issue commands and `describe issues comment` returns one command. An unknown path returns `invalid_input`. A close path also returns up to three canonical suggestions in the JSON `suggestions` field.
 
 Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The `--db` default is the resolved path for the current `--local` or `--data-dir` selection. Resolution does not open storage. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
+
+For agent workflows and strict JSON pipelines, run `npx --yes --loglevel=error @andrestobelem/clone`. The extra options suppress npm notices. Clone does not control output written by the parent npm process.
 
 With `--json`, each error is one JSON object on stderr. Stdout is empty on failure. Errors contain `code`, `message`, and `exitCode`.
 

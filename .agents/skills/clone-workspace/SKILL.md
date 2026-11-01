@@ -5,21 +5,23 @@ description: Operate a Clone issue and project workspace from another repository
 
 # Clone workspace
 
-Use the Clone CLI through `npx`. The CLI and browser use the same records and actions. A web server is not required for CLI work.
+Use the Clone CLI through `npx --yes --loglevel=error @andrestobelem/clone`. These npm options leave stdout and stderr available for Clone JSON. The CLI and browser use the same records and actions. A web server is not required for CLI work.
 
 ## Select storage
 
 Use one storage mode for the complete task.
 
-- Use the global workspace by default: `npx @andrestobelem/clone`.
-- Use `npx @andrestobelem/clone --local` when the user requests a workspace for the current repository or when that repository already contains `.clone/`.
+- Use the global workspace by default.
+- Use `--local` when the user requests a workspace for the current repository or when that repository already contains `.clone/`.
 - Use `--data-dir PATH` only when the user selects an explicit data directory.
+- Use `--db PATH` only when the user selects an explicit SQLite file.
+- Select only one of `--local`, `--data-dir`, and `--db`.
 
 For a new local workspace, add `.clone/` to the repository's `.gitignore` unless the user has a specific Git backup workflow.
 
 ## Prepare
 
-Run `describe COMMAND... --json` with the selected storage mode. Select the command group or complete command path required by the task. Run `describe --json` only when the task needs the complete catalog. Describe is the source of truth for current commands and flags.
+Run `context --json` with the selected storage mode. Then run `describe COMMAND... --json` with the same mode. Select the command group or complete command path required by the task. Run `describe --json` only when the task needs the complete catalog. Describe is the source of truth for current commands and flags.
 
 Before a write, also run `sync status --json`. Preparation is complete when the command contract and storage state are known. Keep the same storage mode for every later command.
 
@@ -43,10 +45,10 @@ Perform the requested action with JSON output. After each write, read the result
 Example with repository-local storage:
 
 ```sh
-npx @andrestobelem/clone --local teams list --json
-npx @andrestobelem/clone --local issues show PRO-248 --json
-npx @andrestobelem/clone --local issues update PRO-248 --actor 6 --status "In Progress" --json
-npx @andrestobelem/clone --local issues show PRO-248 --json
+npx --yes --loglevel=error @andrestobelem/clone --local teams list --json
+npx --yes --loglevel=error @andrestobelem/clone --local issues show PRO-248 --json
+npx --yes --loglevel=error @andrestobelem/clone --local issues update PRO-248 --actor 6 --status "In Progress" --json
+npx --yes --loglevel=error @andrestobelem/clone --local issues show PRO-248 --json
 ```
 
 Use `--data -` for a JSON object through stdin or `--data @file.json` for a file. Flags override matching payload fields. Use JSON `null` to clear nullable fields.
