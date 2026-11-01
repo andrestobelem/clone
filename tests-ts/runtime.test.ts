@@ -277,6 +277,11 @@ describe("CLI contract", () => {
     const text = runTypeScript(["issues", "comments", "create"]);
     expect(text.status).toBe(2);
     expect(text.stderr).toContain("Did you mean: issues comment?");
+
+    const commandTypo = runTypeScript(["projecs", "list", "--json"]);
+    expect(JSON.parse(commandTypo.stderr)).toMatchObject({
+      suggestions: ["projects list"],
+    });
   });
 
   it("omits suggestions for unrelated command paths", () => {

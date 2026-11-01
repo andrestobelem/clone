@@ -539,12 +539,11 @@ function commandSuggestions(input: readonly string[]): string[] {
       const verbDistance =
         inputVerb && verb
           ? editDistance(inputVerb, verb)
-          : Number.POSITIVE_INFINITY;
+          : inputVerb
+            ? Number.POSITIVE_INFINITY
+            : 0;
       const accepted =
-        (inputCommand === command &&
-          Boolean(inputVerb && verb) &&
-          verbDistance <= 1) ||
-        (!inputVerb && commandDistance <= 2);
+        commandDistance <= 2 && (!inputVerb || verbDistance <= 1);
       return {
         accepted,
         path: candidate.join(" "),
