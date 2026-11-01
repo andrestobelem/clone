@@ -13,11 +13,31 @@ import {
 } from "./database.js";
 import { InvalidInputError, RelationshipConflictError } from "./errors.js";
 import { issueStatuses, priorities } from "./schema.js";
-import type { JsonObject, JsonValue, Row, StoragePaths } from "./types.js";
+import type {
+  JsonObject,
+  JsonValue,
+  MutationResult,
+  Row,
+  StoragePaths,
+} from "./types.js";
 import { mutationPayload } from "./validation.js";
 import { actorRecord, actorRecords, requireActor } from "./actors.js";
 import { now } from "./time.js";
-import { isObject, parseJson } from "./workspace-helpers.js";
+import { mutateTeam } from "./teams.js";
+import {
+  array,
+  event,
+  fail,
+  isObject,
+  parseJson,
+  priorityNumber,
+  replaceLinks,
+  text,
+  updateColumns,
+  updateFields,
+  updateSetting,
+  withoutActor,
+} from "./workspace-helpers.js";
 import { issueRow } from "./workspace-reads.js";
 
 export { actorRecord, actorRecords, requireActor } from "./actors.js";
@@ -29,10 +49,6 @@ export {
 } from "./seed.js";
 export { now } from "./time.js";
 export { bootstrap, issueRow, search } from "./workspace-reads.js";
-
-export interface MutationResult extends JsonObject {
-  _status?: number;
-}
 
 export function dispatchMutation(
   database: Database,
@@ -105,139 +121,6 @@ function mutateAgent(
     );
   } else return { error: "Not found", _status: 404 };
   return { agent: actorRecord(database, agentId) as JsonValue };
-}
-
-function mutateTeam(
-  database: Database,
-  method: string,
-  route: string,
-  data: JsonObject,
-  stamp: string,
-  actor: number,
-): MutationResult | null {
-  if (route === "/api/teams" && method === "POST") {
-    const name = text(data.name, "Team name is required");
-    const key = String(data.key ?? name.slice(0, 3))
-      .replace(/[^A-Za-z0-9]/g, "")
-      .toUpperCase()
-      .slice(0, 5);
-    if (!key) fail("Team key must contain letters or digits");
-    run(
-      database,
-      "INSERT INTO teams(name,key,description,icon,created_at) VALUES(?,?,?,?,?)",
-      name,
-      key,
-      sql(data.description ?? ""),
-      sql(data.icon ?? "✳"),
-      stamp,
-    );
-    const teamId = lastInsertId(database);
-    run(
-      database,
-      "INSERT INTO team_members(team_id,member_id,role) VALUES(?,?,'Lead')",
-      teamId,
-      actor,
-    );
-    for (const participant of array(data.memberIds))
-      run(
-        database,
-        "INSERT OR IGNORE INTO team_members(team_id,member_id) VALUES(?,?)",
-        teamId,
-        sql(participant),
-      );
-    issueStatuses.forEach(([status, category], position) =>
-      run(
-        database,
-        "INSERT INTO issue_statuses(team_id,name,category,position,color,is_default) VALUES(?,?,?,?,?,?)",
-        teamId,
-        status,
-        category,
-        position,
-        "#8e8e98",
-        status === "Backlog" ? 1 : 0,
-      ),
-    );
-    return { teamId, _status: 201 };
-  }
-  if (route === "/api/statuses" && method === "POST") {
-    const teamId = Number(data.teamId ?? 1);
-    const name = text(data.name, "Status name is required");
-    const position = Number(
-      scalar(
-        database,
-        "SELECT COALESCE(MAX(position),-1)+1 FROM issue_statuses WHERE team_id=?",
-        teamId,
-      ),
-    );
-    run(
-      database,
-      "INSERT INTO issue_statuses(team_id,name,category,position,color) VALUES(?,?,?,?,?)",
-      teamId,
-      name,
-      sql(data.category ?? "Unstarted"),
-      position,
-      sql(data.color ?? "#8989a1"),
-    );
-    return { statusId: lastInsertId(database), _status: 201 };
-  }
-  if (route === "/api/labels" && method === "POST") {
-    run(
-      database,
-      "INSERT INTO labels(name,color,team_id) VALUES(?,?,?)",
-      text(data.name, "Label name is required"),
-      sql(data.color ?? "#8585cc"),
-      sql(data.teamId ?? 1),
-    );
-    return { labelId: lastInsertId(database), _status: 201 };
-  }
-  const team = route.match(/^\/api\/teams\/(\d+)$/);
-  if (team && ["PUT", "PATCH"].includes(method)) {
-    const teamId = Number(team[1]);
-    if (!one(database, "SELECT id FROM teams WHERE id=?", teamId))
-      fail("Team not found");
-    updateFields(database, "teams", "id", teamId, data, {
-      name: "name",
-      description: "description",
-      icon: "icon",
-      timezone: "timezone",
-      estimateType: "estimate_type",
-    });
-    if ("memberIds" in data)
-      replaceLinks(
-        database,
-        "team_members",
-        "team_id",
-        teamId,
-        "member_id",
-        array(data.memberIds),
-      );
-    return { ok: true };
-  }
-  const resources = route.match(/^\/api\/teams\/(\d+)\/resources(?:\/(\d+))?$/);
-  if (resources && !resources[2] && method === "POST") {
-    const url = String(data.url ?? "").trim();
-    if (!/^https?:\/\//i.test(url))
-      fail("Resource links must start with http:// or https://");
-    run(
-      database,
-      "INSERT INTO team_resources(team_id,section,title,url) VALUES(?,?,?,?)",
-      Number(resources[1]),
-      String(data.section ?? "Resources").trim() || "Resources",
-      text(data.title, "Resource title is required"),
-      url,
-    );
-    return { resourceId: lastInsertId(database), _status: 201 };
-  }
-  if (resources?.[2] && method === "DELETE") {
-    run(
-      database,
-      "DELETE FROM team_resources WHERE team_id=? AND id=?",
-      Number(resources[1]),
-      Number(resources[2]),
-    );
-    return { ok: true };
-  }
-  return null;
 }
 
 function mutateProject(
@@ -1261,50 +1144,6 @@ function issueStatus(database: Database, teamId: number, name?: string): Row {
     );
   return row;
 }
-function event(
-  database: Database,
-  type: string,
-  id: number,
-  actor: number,
-  action: string,
-  payload: JsonObject,
-) {
-  run(
-    database,
-    "INSERT INTO activity_events(entity_type,entity_id,actor_id,action,payload,created_at) VALUES(?,?,?,?,?,?)",
-    type,
-    id,
-    actor,
-    action,
-    JSON.stringify(payload),
-    now(),
-  );
-}
-function updateSetting(database: Database, key: string, value: JsonValue) {
-  const row = one(
-    database,
-    "SELECT value_json FROM app_settings WHERE key=?",
-    key,
-  );
-  const existing = parseJson(row?.value_json, {}) as JsonValue;
-  if (isObject(existing) && isObject(value)) value = { ...existing, ...value };
-  run(
-    database,
-    "INSERT INTO app_settings(key,value_json,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at",
-    key,
-    JSON.stringify(value),
-    now(),
-  );
-}
-function priorityNumber(value: unknown): number {
-  if (Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 4)
-    return Number(value);
-  if (typeof value === "string" && /^\d$/.test(value) && Number(value) <= 4)
-    return Number(value);
-  const index = priorities.indexOf(value as never);
-  if (index < 0) fail("Unknown priority");
-  return index;
-}
 function recurringNext(value: string, cadence: string): string {
   const [year, month, day] = value.split("-").map(Number) as [
     number,
@@ -1321,67 +1160,4 @@ function recurringNext(value: string, cadence: string): string {
     date.setTime(Date.UTC(targetYear, targetMonth - 1, Math.min(day, lastDay)));
   } else date.setUTCDate(date.getUTCDate() + 7);
   return date.toISOString().slice(0, 10);
-}
-function updateFields(
-  database: Database,
-  table: string,
-  key: string,
-  id: number | string,
-  data: JsonObject,
-  map: Record<string, string>,
-  transforms: Record<string, (value: unknown) => unknown> = {},
-): boolean {
-  const changes: Record<string, unknown> = {};
-  for (const [source, target] of Object.entries(map))
-    if (source in data)
-      changes[target] = (transforms[source] ?? ((v) => v))(data[source]);
-  updateColumns(database, table, key, id, changes);
-  return Object.keys(changes).length > 0;
-}
-function updateColumns(
-  database: Database,
-  table: string,
-  key: string,
-  id: number | string,
-  changes: Record<string, unknown>,
-) {
-  const entries = Object.entries(changes);
-  if (!entries.length) return;
-  database
-    .prepare(
-      `UPDATE ${table} SET ${entries.map(([column]) => `${column}=?`).join(",")} WHERE ${key}=?`,
-    )
-    .run(...entries.map(([, value]) => sql(value)), id);
-}
-function replaceLinks(
-  database: Database,
-  table: string,
-  key: string,
-  id: number,
-  column: string,
-  values: unknown[],
-) {
-  run(database, `DELETE FROM ${table} WHERE ${key}=?`, id);
-  for (const value of values)
-    run(
-      database,
-      `INSERT OR IGNORE INTO ${table}(${key},${column}) VALUES(?,?)`,
-      id,
-      sql(value),
-    );
-}
-function text(value: unknown, message: string): string {
-  const result = String(value ?? "").trim();
-  if (!result) fail(message);
-  return result;
-}
-function array(value: unknown, fallback: unknown[] = []): unknown[] {
-  return Array.isArray(value) ? value : fallback;
-}
-function withoutActor(data: JsonObject): JsonObject {
-  const { actorId: _, ...rest } = data;
-  return rest;
-}
-function fail(message: string): never {
-  throw new InvalidInputError(message);
 }
