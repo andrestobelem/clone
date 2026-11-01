@@ -1,7 +1,7 @@
 ---
 name: grill-with-docs
-description: A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.
+description: A relentless interview to sharpen a plan or design and record resolved domain terms and decisions.
 disable-model-invocation: true
 ---
 
-Call the Skill tool twice, for "grilling" and "domain-modeling".
+Read [grilling](../grilling/SKILL.md) and [domain-modeling](../domain-modeling/SKILL.md) completely. Follow both skills during the session.
