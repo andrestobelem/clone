@@ -195,17 +195,26 @@ export function importSnapshot(
   if (fs.existsSync(paths.database)) {
     const current = openDatabase(paths, { allowLegacy: true });
     try {
-      before = databaseFiles(paths, current);
+      try {
+        before = databaseFiles(paths, current);
+      } catch (error) {
+        if (!options.force) throw error;
+      }
     } finally {
       current.close();
     }
   }
   const candidateForFiles = openDatabase(candidatePaths);
-  const after = databaseFiles(
-    { ...paths, database: candidatePath },
-    candidateForFiles,
-  );
-  candidateForFiles.close();
+  let after: Record<string, Buffer>;
+  try {
+    after = filesFromRecords(
+      schemaManifest(candidateForFiles),
+      records,
+      loaded.attachments,
+    );
+  } finally {
+    candidateForFiles.close();
+  }
   const diff = differences(before, after);
   if (options.dryRun) {
     fs.rmSync(candidatePath, { force: true });
@@ -611,6 +620,16 @@ function backupStorage(paths: StoragePaths): void {
     `workspace-${new Date().toISOString().replaceAll(":", "-")}.sqlite3`,
   );
   fs.copyFileSync(paths.database, destination);
+  if (fs.existsSync(paths.attachmentsDirectory)) {
+    fs.cpSync(
+      paths.attachmentsDirectory,
+      path.join(
+        paths.backupsDirectory,
+        `${path.basename(destination, ".sqlite3")}-attachments`,
+      ),
+      { recursive: true },
+    );
+  }
   if (fs.existsSync(paths.snapshotDirectory)) {
     fs.cpSync(
       paths.snapshotDirectory,

@@ -530,6 +530,55 @@ function seedDemoContent(database: Database, stamp: string): void {
     database,
     "INSERT INTO team_resources(team_id,section,title,url) VALUES(1,'Resources','Product principles','https://example.local/principles')",
   );
+  const notifications = [
+    [
+      1,
+      1,
+      "comment",
+      "Maya commented on PRO-248",
+      "I drafted the shortcut map; we can review the final keys with the team.",
+      "issue",
+      issueId("PRO-248"),
+      0,
+    ],
+    [
+      2,
+      1,
+      "assignment",
+      "PRO-237 was assigned to you",
+      "Remember the last selected team view",
+      "issue",
+      issueId("PRO-237"),
+      0,
+    ],
+    [
+      3,
+      1,
+      "project_update",
+      "Workspace foundations update",
+      "Prototype review is complete. The team beta is next.",
+      "project",
+      1,
+      1,
+    ],
+    [
+      4,
+      2,
+      "mention",
+      "Alex mentioned you in PRO-246",
+      "Can you review the labels proposal?",
+      "issue",
+      issueId("PRO-246"),
+      0,
+    ],
+  ] as const;
+  for (const item of notifications)
+    run(
+      database,
+      "INSERT INTO notifications(id,recipient_id,kind,title,body,entity_type,entity_id,is_read,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+      ...item,
+      stamp,
+    );
   const views = [
     [
       1,
@@ -2370,7 +2419,9 @@ function run(database: Database, query: string, ...values: SQLInputValue[]) {
   return database.prepare(query).run(...values);
 }
 function sql(value: unknown): SQLInputValue {
-  return value === undefined ? null : (value as SQLInputValue);
+  if (value === undefined) return null;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  return value as SQLInputValue;
 }
 function text(value: unknown, message: string): string {
   const result = String(value ?? "").trim();
