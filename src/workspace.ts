@@ -1,9 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { SQLInputValue } from "node:sqlite";
 
-import { lastInsertId, type Database } from "./database.js";
+import {
+  lastInsertId,
+  one,
+  rows,
+  run,
+  scalar,
+  sql,
+  type Database,
+} from "./database.js";
 import { InvalidInputError, RelationshipConflictError } from "./errors.js";
 import { issueStatuses, priorities, schema } from "./schema.js";
 import type { JsonObject, JsonValue, Row, StoragePaths } from "./types.js";
@@ -2392,36 +2399,6 @@ function replaceLinks(
       id,
       sql(value),
     );
-}
-function rows(
-  database: Database,
-  query: string,
-  ...values: SQLInputValue[]
-): Row[] {
-  return database.prepare(query).all(...values) as Row[];
-}
-function one(
-  database: Database,
-  query: string,
-  ...values: SQLInputValue[]
-): Row | undefined {
-  return database.prepare(query).get(...values) as Row | undefined;
-}
-function scalar(
-  database: Database,
-  query: string,
-  ...values: SQLInputValue[]
-): SQLInputValue | undefined {
-  const row = one(database, query, ...values);
-  return row ? (Object.values(row)[0] as SQLInputValue) : undefined;
-}
-function run(database: Database, query: string, ...values: SQLInputValue[]) {
-  return database.prepare(query).run(...values);
-}
-function sql(value: unknown): SQLInputValue {
-  if (value === undefined) return null;
-  if (typeof value === "boolean") return value ? 1 : 0;
-  return value as SQLInputValue;
 }
 function text(value: unknown, message: string): string {
   const result = String(value ?? "").trim();

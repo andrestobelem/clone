@@ -53,14 +53,11 @@ export function hasTable(database: Database, name: string): boolean {
   );
 }
 
-export function all(
-  statement: StatementSync,
-  ...values: SQLInputValue[]
-): Row[] {
+function all(statement: StatementSync, ...values: SQLInputValue[]): Row[] {
   return statement.all(...values) as Row[];
 }
 
-export function get(
+function get(
   statement: StatementSync,
   ...values: SQLInputValue[]
 ): Row | undefined {
@@ -72,4 +69,43 @@ export function lastInsertId(database: Database): number {
     id: number;
   };
   return Number(row.id);
+}
+
+export function rows(
+  database: Database,
+  query: string,
+  ...values: SQLInputValue[]
+): Row[] {
+  return all(database.prepare(query), ...values);
+}
+
+export function one(
+  database: Database,
+  query: string,
+  ...values: SQLInputValue[]
+): Row | undefined {
+  return get(database.prepare(query), ...values);
+}
+
+export function scalar(
+  database: Database,
+  query: string,
+  ...values: SQLInputValue[]
+): SQLInputValue | undefined {
+  const row = one(database, query, ...values);
+  return row ? (Object.values(row)[0] as SQLInputValue) : undefined;
+}
+
+export function run(
+  database: Database,
+  query: string,
+  ...values: SQLInputValue[]
+) {
+  return database.prepare(query).run(...values);
+}
+
+export function sql(value: unknown): SQLInputValue {
+  if (value === undefined) return null;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  return value as SQLInputValue;
 }
