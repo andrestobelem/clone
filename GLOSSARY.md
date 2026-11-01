@@ -43,7 +43,7 @@ A stable reference that identifies one issue in the workspace. An issue keeps th
 An issue that belongs to a parent issue. Parent and sub-issue relationships form a hierarchy.
 
 **Subscriber**:
-An actor that follows an issue and receives its notifications.
+An actor that follows an issue.
 
 **Workflow status**:
 A state in a team's issue workflow.
