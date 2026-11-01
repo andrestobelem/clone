@@ -8,6 +8,7 @@ data/*.sqlite3
 data/*.sqlite3-shm
 data/*.sqlite3-wal
 data/attachments/
+data/snapshot/
 
 # Local synchronization state and backups
 data/.sync-*
