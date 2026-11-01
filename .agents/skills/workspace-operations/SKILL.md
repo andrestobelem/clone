@@ -7,24 +7,16 @@ description: Read or change issues, projects, teams, views, and other data in th
 
 Use the workspace CLI for every record read or write. Answer the user in the language they used.
 
-## Prepare
-
-Work from the repository root. Read the [Agent CLI guide](../../../docs/AGENTS.md) before the first command in the task. Use the [CLI reference](../../../docs/CLI.md) when command discovery does not provide enough detail.
-
-Run `npx @andrestobelem/clone describe --json`. Before a write, also run `npx @andrestobelem/clone sync status --json`. In the Clone source repository, use `node bin/clone.js` after `npm run build`. Preparation is complete when the command contract and storage state are known.
-
-## Select the actor
-
-For a write, find this agent's stable actor by key. Register it only when it does not exist. Use its actor ID on every write. The Agent CLI guide defines registration, inactive actors, and actor fields. Actor selection is complete when one active actor ID is selected.
+Before the first command, read the [Agent CLI guide](../../../docs/AGENTS.md) completely. It is the source of truth for storage, actor identity, relationships, and recovery. Use the [CLI reference](../../../docs/CLI.md) only when command discovery does not provide enough detail.
 
 ## Operate
 
-Read the current record and its related records. Use JSON output. Perform the requested action with the selected actor. Read the result after each write.
+1. Work from the repository root. Use the source-repository command defined in the Agent CLI guide.
+2. Discover the command contract. Before a write, also check storage and select one active actor.
+3. Read the target record and its related records.
+4. Perform the requested action with JSON output. For a write, use the selected actor.
+5. Read the result after each write.
 
 The operation is complete only when the returned record contains the requested values and storage reports no error.
 
-## Recover
-
-Follow the recovery action for the exact error category in the Agent CLI guide. A `pending_export` means the write committed; recover publication without repeating the write. A `sync_conflict` requires inspection of both sides.
-
-Use the CLI recovery commands. Keep SQLite, snapshot records, and recovery files under CLI control. Recovery is complete when `sync status --json` reports a consistent state.
+If a command fails, follow the recovery action for its exact error category in the Agent CLI guide. Recovery is complete when storage reports a consistent state.
