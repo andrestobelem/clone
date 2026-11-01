@@ -9,8 +9,17 @@ The application runs in one local process or several cooperating local processes
 | `index.html`, `styles.css`, `app.js` | UI shell, rendering, forms, navigation, and HTTP requests |
 | `src/server.ts` | Static UI files, JSON routes, attachment downloads, and recurring scheduler |
 | `src/cli.ts` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
-| `src/actors.ts` | Actor lookup and active-actor validation |
-| `src/workspace.ts` | Demo data, relationship checks, queries, mutations, and automations |
+| `src/workspace.ts` | Stable facade for workspace operations |
+| `src/seed.ts` | Schema setup, empty workspace data, and demo data |
+| `src/workspace-reads.ts` | Bootstrap data, search, and record composition |
+| `src/workspace-mutations.ts` | Mutation dispatch and workspace-wide mutations |
+| `src/actors.ts` | Actor lookup, validation, and agent mutations |
+| `src/teams.ts` | Team, workflow status, label, and resource mutations |
+| `src/projects.ts` | Project, milestone, update, and dependency mutations |
+| `src/issues.ts` | Issue mutations, relationships, and attachments |
+| `src/automations.ts` | Automation rule execution |
+| `src/recurring.ts` | Recurring rule execution and date advancement |
+| `src/workspace-helpers.ts` | Internal mutation and JSON helpers |
 | `src/schema.ts` | SQLite schema and stored domain constants |
 | `src/validation.ts` | Shared input types, dates, numeric bounds, and payload normalization |
 | `src/sync.ts` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
@@ -18,7 +27,7 @@ The application runs in one local process or several cooperating local processes
 | `bin/clone.js` | npm executable entry point |
 | `tests-ts/`, `tests/` | Runtime, package-contract, and UI model checks |
 
-HTTP and CLI mutations call `mutate`, which calls `dispatchMutation`. The shared validation runs before the action changes records. UI forms can apply more specific display and required-field rules.
+HTTP and CLI mutations call `mutate`, which calls `dispatchMutation` through the workspace facade. The dispatcher validates the shared payload and delegates the action to its domain module. UI forms can apply more specific display and required-field rules.
 
 ## Runtime decision
 
