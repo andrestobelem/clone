@@ -181,7 +181,10 @@ export async function main(argv: string[]): Promise<number> {
     }
     const parsed = parseArguments(argv);
     if (parsed.command === "describe") {
-      writeResult(describe(parsed.positionals), true);
+      writeResult(
+        describe(parsed.positionals, resolveDatabasePath(parsed)),
+        true,
+      );
       return 0;
     }
     const paths = resolvePaths(parsed);
@@ -444,20 +447,22 @@ function parseArguments(argv: string[]): Parsed {
 }
 
 function resolvePaths(parsed: Parsed) {
+  return storagePaths(
+    resolveDatabasePath(parsed),
+    parsed.options.syncDir
+      ? path.resolve(String(parsed.options.syncDir))
+      : undefined,
+  );
+}
+function resolveDatabasePath(parsed: Parsed): string {
   let directory: string;
   if (parsed.options.local) directory = path.join(process.cwd(), ".clone");
   else if (parsed.options.dataDir)
     directory = path.resolve(String(parsed.options.dataDir));
   else directory = defaultDataDirectory();
-  const database = parsed.options.db
+  return parsed.options.db
     ? path.resolve(String(parsed.options.db))
     : path.join(directory, "workspace.sqlite3");
-  return storagePaths(
-    database,
-    parsed.options.syncDir
-      ? path.resolve(String(parsed.options.syncDir))
-      : undefined,
-  );
 }
 function readPayload(parsed: Parsed): JsonObject {
   let value: unknown = {};
@@ -498,7 +503,7 @@ function addFiles(payload: JsonObject, files: string[]) {
   payload.files = items;
 }
 
-function describe(pathPrefix: readonly string[] = []) {
+function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
   const commands: Array<{ path: string[]; arguments: unknown[] }> = [];
   const globals = [
     argument(
@@ -506,7 +511,7 @@ function describe(pathPrefix: readonly string[] = []) {
       ["--db"],
       "string",
       false,
-      path.join(process.cwd(), "data/workspace.sqlite3"),
+      resolvedDatabase,
       undefined,
       "SQLite path",
     ),

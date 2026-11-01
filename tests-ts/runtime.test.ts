@@ -194,6 +194,63 @@ describe("CLI contract", () => {
     });
   });
 
+  it.each([false, true])(
+    "describes resolved database paths without opening storage (filtered: %s)",
+    (filtered) => {
+      const root = fs.realpathSync(temporaryDirectory());
+      const commandPath = filtered ? ["issues", "comment"] : [];
+      const cases = [
+        {
+          name: "installed default",
+          arguments: [] as string[],
+          cwd: path.join(root, "default-cwd"),
+          environment: { CLONE_DATA_DIR: path.join(root, "default-data") },
+          expected: path.join(root, "default-data", "workspace.sqlite3"),
+        },
+        {
+          name: "local",
+          arguments: ["--local"],
+          cwd: path.join(root, "local-cwd"),
+          environment: {},
+          expected: path.join(root, "local-cwd", ".clone", "workspace.sqlite3"),
+        },
+        {
+          name: "data directory",
+          arguments: ["--data-dir", path.join(root, "selected-data")],
+          cwd: path.join(root, "data-dir-cwd"),
+          environment: {},
+          expected: path.join(root, "selected-data", "workspace.sqlite3"),
+        },
+      ];
+
+      for (const testCase of cases) {
+        fs.mkdirSync(testCase.cwd, { recursive: true });
+        const result = runTypeScript(
+          [...testCase.arguments, "describe", ...commandPath, "--json"],
+          { cwd: testCase.cwd, environment: testCase.environment },
+        );
+        expect(result.status, `${testCase.name}: ${result.stderr}`).toBe(0);
+        const catalog = JSON.parse(result.stdout) as {
+          formatVersion: number;
+          commands: Array<{
+            path: string[];
+            arguments: Array<{ name: string; default?: unknown }>;
+          }>;
+        };
+        expect(catalog.formatVersion).toBe(1);
+        if (filtered) expect(catalog.commands).toHaveLength(1);
+        else expect(catalog.commands.length).toBeGreaterThan(1);
+        for (const command of catalog.commands) {
+          expect(
+            command.arguments.find((argument) => argument.name === "db"),
+          ).toMatchObject({ default: testCase.expected });
+        }
+        expect(fs.existsSync(testCase.expected)).toBe(false);
+        expect(fs.existsSync(path.dirname(testCase.expected))).toBe(false);
+      }
+    },
+  );
+
   it("returns a stable JSON error for an unknown describe path", () => {
     const result = runTypeScript(["describe", "issues", "missing", "--json"]);
     expect(result.status).toBe(2);
@@ -254,9 +311,20 @@ function temporaryDirectory(): string {
   return directory;
 }
 
-function runTypeScript(arguments_: string[]) {
-  return spawnSync(process.execPath, ["bin/clone.js", ...arguments_], {
-    cwd: path.resolve("."),
-    encoding: "utf8",
-  });
+function runTypeScript(
+  arguments_: string[],
+  options: {
+    readonly cwd?: string;
+    readonly environment?: NodeJS.ProcessEnv;
+  } = {},
+) {
+  return spawnSync(
+    process.execPath,
+    [path.resolve("bin/clone.js"), ...arguments_],
+    {
+      cwd: options.cwd ?? path.resolve("."),
+      env: { ...process.env, ...options.environment },
+      encoding: "utf8",
+    },
+  );
 }

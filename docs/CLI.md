@@ -21,7 +21,9 @@ Start the web server with `npx @andrestobelem/clone`. The server creates an empt
 
 Use `npx @andrestobelem/clone --help` or add `--help` to any command. Global options can appear before or after the command:
 
-- `--db PATH`: SQLite file. Direct CLI use defaults to `data/workspace.sqlite3`.
+- `--local`: use `./.clone/` in the current directory.
+- `--data-dir PATH`: use an explicit storage directory.
+- `--db PATH`: use an explicit SQLite file. Without this option, Clone uses `workspace.sqlite3` in the selected local, explicit, or installed user data directory.
 - `--sync-dir PATH`: snapshot directory. The default is `snapshot/` next to the database.
 - `--actor ID`: actor who performs an action. The default is 1.
 - `--json`: JSON output and JSON errors. Structured results also use JSON by default.
@@ -143,7 +145,7 @@ The API adds `GET /api/actors`, `GET /api/actors/ID`, `GET /api/agents`, and `GE
 
 `npx @andrestobelem/clone describe` returns the complete format-version-1 command catalog without opening storage. Add a command path prefix to return only matching contracts. For example, `describe issues` returns all issue commands and `describe issues comment` returns one command. An unknown path returns `invalid_input`.
 
-Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
+Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The `--db` default is the resolved path for the current `--local` or `--data-dir` selection. Resolution does not open storage. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
 
 With `--json`, each error is one JSON object on stderr. Stdout is empty on failure. Errors contain `code`, `message`, and `exitCode`.
 
