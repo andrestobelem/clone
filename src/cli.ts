@@ -172,7 +172,7 @@ export async function main(argv: string[]): Promise<number> {
   const wantsJson = argv.includes("--json");
   try {
     if (argv.includes("--version") || argv.includes("-V")) {
-      console.log("0.2.0");
+      console.log("0.2.1");
       return 0;
     }
     if (argv.includes("--help") || argv.includes("-h")) {
@@ -689,7 +689,7 @@ function argument(
 }
 function printHelp() {
   console.log(
-    `Clone 0.2.0\n\nUsage:\n  clone [--local | --data-dir PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH] <CLI command> [options]`,
+    `Clone 0.2.1\n\nUsage:\n  clone [--local | --data-dir PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH] <CLI command> [options]`,
   );
 }
 function writeResult(value: unknown, json: boolean) {
