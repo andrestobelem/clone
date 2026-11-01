@@ -1,26 +1,29 @@
 # Architecture
 
-The application runs in one local process or several cooperating local processes. It uses Python 3.14, SQLite, and browser JavaScript. The project pins Python 3.14 through uv. It does not need third-party Python packages.
+The application runs in one local process or several cooperating local processes. It uses TypeScript, Node.js 24.15 or later, `node:sqlite`, and browser JavaScript.
 
 ## Components
 
 | Component | Responsibility |
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | UI shell, rendering, forms, navigation, and HTTP requests |
-| `server.py` | Static UI files, JSON routes, attachment downloads, and recurring scheduler |
-| `cli.py` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
-| `workspace.py` | SQLite schemas, demo seed, actor and relationship checks, queries, mutations, and automations |
-| `workspace_agents.py` | Agent identity mutations |
-| `workspace_issues.py` | Issue, comment, attachment, and relation mutations |
-| `workspace_projects.py` | Project, milestone, update, and dependency mutations |
-| `workspace_teams.py` | Team, workflow status, label, and resource mutations |
-| `validation.py` | Shared input types, dates, numeric bounds, and payload normalization |
-| `snapshot.py` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
-| `npm/bin/clone.js` | Platform selection, executable download, user data paths, and process launch |
-| `scripts/build-binary.py` | Standalone executable build for one operating system and architecture |
-| `tests/` | Temporary-storage checks for actions, actors, validation, snapshots, and failure recovery |
+| `src/server.ts` | Static UI files, JSON routes, attachment downloads, and recurring scheduler |
+| `src/cli.ts` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
+| `src/workspace.ts` | Demo data, actor and relationship checks, queries, mutations, and automations |
+| `src/schema.ts` | SQLite schema and stored domain constants |
+| `src/validation.ts` | Shared input types, dates, numeric bounds, and payload normalization |
+| `src/sync.ts` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
+| `src/database.ts` | `node:sqlite` connection settings and database helpers |
+| `bin/clone.js` | npm executable entry point |
+| `tests-ts/`, `tests/` | Runtime, package-contract, and UI model checks |
 
-HTTP and CLI mutations call `snapshot.mutate`, which calls `workspace.dispatch_mutation`. The shared validation runs before the action changes records. UI forms can apply more specific display and required-field rules.
+HTTP and CLI mutations call `mutate`, which calls `dispatchMutation`. The shared validation runs before the action changes records. UI forms can apply more specific display and required-field rules.
+
+## Runtime decision
+
+Clone uses one TypeScript runtime on Node.js 24.15 or later. It uses the built-in `node:sqlite` module. The npm package is the only supported distribution. This removes the platform executable download and keeps `npx`, the CLI, the HTTP server, and the scheduler on one implementation.
+
+The migration keeps the existing SQLite schema, snapshot format, HTTP routes, CLI command catalog, actor model, and local-first storage rules. It does not move workspace records to a hosted service. This decision follows the constitution because it reduces the number of runtimes without weakening local ownership, recoverability, or agent access.
 
 Reads use SQL rows or assembled issue/project records. Bootstrap returns the UI data, including related records and progress. It loads active issues and projects plus separate archives. The UI refreshes bootstrap after writes.
 
@@ -55,7 +58,7 @@ The CLI, HTTP server, and scheduler share this lock. Do not use a separate lock 
 
 ## Storage and recovery
 
-Direct CLI use defaults to `data/workspace.sqlite3`. `start.sh` uses `data/clone/workspace.sqlite3`. The npm launcher uses the operating system's user data directory, `./.clone/` with `--local`, or the path given by `--data-dir`. Attachments, backups, and `.sync-*` state files are next to the selected database. The default snapshot is `snapshot/` next to that database; `--sync-dir` can select another directory for direct CLI use.
+Installed use defaults to the operating system's user data directory. `--local` uses `./.clone/`. `--data-dir` selects an explicit directory. Repository development uses `data/clone/`. Attachments, backups, and `.sync-*` state files are next to the selected database. The default snapshot is `snapshot/` next to that database; `--sync-dir` can select another directory.
 
 SQLite uses foreign keys and WAL mode. Snapshots contain all supported table rows and referenced attachment bytes. IDs, timestamps, inactive actors, archives, and history are retained. The manifest describes format version 2. Format-1 import creates member actors; explicit migration upgrades an existing database.
 
@@ -81,4 +84,4 @@ The default bind address is `127.0.0.1`. `CLONE_HOST` can change it, but the app
 
 ## Distribution
 
-PyInstaller embeds the Python runtime, application modules, and browser assets in one executable for each target. The npm launcher downloads the matching GitHub release asset and verifies its SHA-256 checksum. It stores the executable in the user cache directory. By default, it stores workspace records in the user data directory. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory. `CLONE_CACHE_DIR`, `CLONE_DATA_DIR`, and `CLONE_BINARY_PATH` override paths for tests and advanced use.
+The root npm package contains the compiled TypeScript runtime and static UI. It does not download a platform executable. `npx @andrestobelem/clone` runs the package executable. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory.

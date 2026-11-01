@@ -1,18 +1,18 @@
 # Clone
 
-A local application for issues, projects, and team planning, inspired by Linear. The browser UI, CLI, and scheduler use the same Python actions and SQLite database. People and external agents have actor identities.
+A local application for issues, projects, and team planning, inspired by Linear. The browser UI, CLI, and scheduler use the same TypeScript actions and SQLite database. People and external agents have actor identities.
 
 Website: <https://clone.andrestobelem.dev>
 
 ## Run with npx
 
-Published releases include Python and all application files. Node.js 18 or later is the only requirement.
+Node.js 24.15 or later is the only requirement.
 
 ```sh
 npx @andrestobelem/clone
 ```
 
-The command downloads the verified executable for the current platform, creates an empty workspace on the first run, starts Clone on `127.0.0.1`, and opens the browser. Stop it with Ctrl+C. Later runs use the same records from the operating system's user data directory.
+The command downloads the npm package, creates an empty workspace on the first run, starts Clone on `127.0.0.1`, and opens the browser. Stop it with Ctrl+C. Later runs use the same records from the operating system's user data directory.
 
 Use another port or keep the browser closed when needed:
 
@@ -69,59 +69,55 @@ The canonical skill source is [`.agents/skills/clone-workspace`](.agents/skills/
 
 ### Data locations
 
-The npm launcher stores workspace records outside the package and outside the current directory:
+Clone stores global workspace records outside the package and outside the current directory:
 
-| System | Workspace data | Downloaded executable cache |
-| --- | --- | --- |
-| macOS | `~/Library/Application Support/Clone/` | `~/Library/Caches/Clone/` |
-| Linux | `$XDG_DATA_HOME/clone/` or `~/.local/share/clone/` | `$XDG_CACHE_HOME/clone/` or `~/.cache/clone/` |
-| Windows | `%APPDATA%\Clone\` | `%LOCALAPPDATA%\Clone\cache\` |
+| System | Workspace data |
+| --- | --- |
+| macOS | `~/Library/Application Support/Clone/` |
+| Linux | `$XDG_DATA_HOME/clone/` or `~/.local/share/clone/` |
+| Windows | `%APPDATA%\Clone\` |
 
-The workspace data directory contains `workspace.sqlite3`, snapshots, attachments, and backups. Set `CLONE_DATA_DIR` to use another data directory. Set `CLONE_CACHE_DIR` to use another executable cache.
+The workspace data directory contains `workspace.sqlite3`, snapshots, attachments, and backups. Use `--data-dir PATH` to select another directory.
 
 ## Run from the repository
 
-- uv and Python 3.14 on macOS or Linux.
+- Node.js 24.15 or later.
 - A current browser with JavaScript enabled.
 
-The application uses the Python standard library. There are no third-party Python dependencies, build steps, or external services. Run `uv sync --locked` to prepare the pinned environment. Keep the server on the default loopback address. The application has no authentication.
+Install the pinned dependencies with `npm ci`. Keep the server on the default loopback address. The application has no authentication.
 
 For personal use with no demo records, open a terminal in this directory and run:
 
 ```sh
-sh start.sh
+npm start
 ```
 
-The script prepares Python with uv and creates an empty workspace on the first
+The command builds the TypeScript source and creates an empty workspace on the first
 run. Open [http://127.0.0.1:4173](http://127.0.0.1:4173), then create a team.
 Run the same command for each later session. Stop with Ctrl+C.
 Your database, snapshots, attachments, and backups stay in `data/clone/`.
 Keep this directory to keep your records.
 The recurring issue scheduler runs while the server is running.
 
-To give the application to another person, build a release archive from a clean
-commit:
+Build the npm package from a clean commit:
 
 ```sh
-sh scripts/build-release.sh
+npm pack
 ```
 
-The script writes `dist/clone-VERSION.tar.gz`. The archive starts with no
-records. It excludes your local environment, databases, attachments, and
-backups. Windows is not verified.
+The command writes `andrestobelem-clone-VERSION.tgz`. The package contains no workspace records.
 
 ## Publish a release
 
-A `vVERSION` tag runs the release workflow. It builds standalone executables for supported macOS, Linux, and Windows targets and publishes them with SHA-256 checksums in a GitHub release. The tag, `pyproject.toml`, and `npm/package.json` versions must match.
+A `vVERSION` tag runs the release workflow. It checks and packs the application, then adds the npm tarball and its SHA-256 checksum to a GitHub release. The tag and root `package.json` version must match.
 
 Published versions are available on [npm](https://www.npmjs.com/package/@andrestobelem/clone) and in [GitHub Releases](https://github.com/andrestobelem/clone/releases).
 
-For a new release, update the version in `pyproject.toml` and `npm/package.json`, commit the change, and push the matching `vVERSION` tag. The release workflow builds and publishes the platform executables first. It publishes npm only when trusted publishing is configured and the `NPM_PUBLISH_ENABLED` repository variable is `true`.
+For a new release, update the version in `package.json`, commit the change, and push the matching `vVERSION` tag. The workflow publishes npm only when trusted publishing is configured and the `NPM_PUBLISH_ENABLED` repository variable is `true`.
 
 Until trusted publishing is enabled, publish npm after the GitHub release succeeds:
 
 ```sh
-cd npm
 npm publish --access public --provenance=false
 ```
 
@@ -130,9 +126,7 @@ Do not set `NPM_PUBLISH_ENABLED` before npm trusted publishing is configured for
 Test a package without publishing it:
 
 ```sh
-npm pack ./npm --dry-run
-uv sync --locked --group package
-uv run --group package python scripts/build-binary.py
+npm pack --dry-run
 ```
 
 ## Create a separate workspace
@@ -140,11 +134,11 @@ uv run --group package python scripts/build-binary.py
 Use another database path to keep test or demo records separate from your workspace:
 
 ```sh
-uv run python cli.py --db /tmp/clone-demo/workspace.sqlite3 init --demo
-uv run python cli.py --db /tmp/clone-demo/workspace.sqlite3 serve
+node bin/clone.js --db /tmp/clone-demo/workspace.sqlite3 init --demo
+node bin/clone.js --db /tmp/clone-demo/workspace.sqlite3 serve
 ```
 
-Choose an unused directory. Omit `--demo` to create a workspace with one local member and no teams. Create a team in the UI or CLI before you add issues. `init` rejects existing storage. `serve` and `server.py` create demo data only when both the database and snapshot are absent.
+Choose an unused directory. Omit `--demo` to create an empty workspace. Create a team in the UI or CLI before you add issues. `init` rejects existing storage. The default `start` command creates empty storage when needed.
 
 ## Included behavior
 
@@ -160,10 +154,10 @@ The application has one local workspace. It does not provide hosted collaboratio
 ## CLI and agent access
 
 ```sh
-uv run python cli.py --help
-uv run python cli.py describe
-uv run python cli.py teams list --json
-uv run python cli.py agents list --all --json
+npx @andrestobelem/clone --help
+npx @andrestobelem/clone describe
+npx @andrestobelem/clone teams list --json
+npx @andrestobelem/clone agents list --all --json
 ```
 
 Register each external agent once with a stable key. Use its returned actor ID on writes. Follow the [Agent CLI guide](docs/AGENTS.md) for registration and recovery. See the [CLI reference](docs/CLI.md) for commands, payloads, and the Git workflow.
@@ -173,7 +167,7 @@ SQLite, attachment storage, recovery files, and backups remain local. The select
 ## Verify changes
 
 ```sh
-uv run python -m unittest discover -s tests -v
+npm run check
 ```
 
 Tests use temporary storage. They cover CLI/HTTP parity, validation, actors, concurrency, snapshots, migration, and recovery. See the [development guide](docs/DEVELOPMENT.md) for browser checks and documentation checks.

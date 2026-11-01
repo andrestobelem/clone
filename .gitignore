@@ -16,3 +16,6 @@ data/backups/
 data/local-workspace/
 data/clone/
 dist/
+node_modules/
+npm-debug.log*
+*.tgz

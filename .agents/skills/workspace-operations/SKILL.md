@@ -11,7 +11,7 @@ Use the workspace CLI for every record read or write. Answer the user in the lan
 
 Work from the repository root. Read the [Agent CLI guide](../../../docs/AGENTS.md) before the first command in the task. Use the [CLI reference](../../../docs/CLI.md) when command discovery does not provide enough detail.
 
-Run `uv run python cli.py describe --json`. Before a write, also run `uv run python cli.py sync status --json`. Preparation is complete when the command contract and storage state are known.
+Run `npx @andrestobelem/clone describe --json`. Before a write, also run `npx @andrestobelem/clone sync status --json`. In the Clone source repository, use `node bin/clone.js` after `npm run build`. Preparation is complete when the command contract and storage state are known.
 
 ## Select the actor
 

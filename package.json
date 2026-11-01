@@ -1,0 +1,55 @@
+{
+  "name": "@andrestobelem/clone",
+  "version": "0.2.0",
+  "description": "Run the Clone issue and project workspace locally.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrestobelem/clone.git"
+  },
+  "homepage": "https://clone.andrestobelem.dev",
+  "bugs": "https://github.com/andrestobelem/clone/issues",
+  "type": "module",
+  "bin": {
+    "clone": "bin/clone.js"
+  },
+  "files": [
+    "bin/clone.js",
+    "dist",
+    "index.html",
+    "app.js",
+    "styles.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "check": "npm run format:check && npm run typecheck && npm test && npm run test:ui",
+    "format": "prettier --write \"src/**/*.ts\" \"tests-ts/**/*.ts\" \"bin/**/*.js\" package.json tsconfig.json tsconfig.build.json",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests-ts/**/*.ts\" \"bin/**/*.js\" package.json tsconfig.json tsconfig.build.json",
+    "pretest": "npm run build",
+    "start": "npm run build && node bin/clone.js --data-dir data/clone start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:ui": "node --check app.js && node --test tests/test_ui.js",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "proper-lockfile": "4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/proper-lockfile": "4.1.4",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

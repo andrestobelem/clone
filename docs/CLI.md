@@ -1,6 +1,6 @@
 # CLI and Git snapshots
 
-The project pins Python 3.14 with uv and uses the standard library. It runs on macOS and Linux. Run `uv sync --locked` to create the project environment. The CLI uses an operating system file lock to share storage with the web server. Keep one database per storage directory. Keep all processes on the same database and snapshot paths.
+Clone requires Node.js 24.15 or later. Run it with `npx @andrestobelem/clone`, or use `node bin/clone.js` after `npm ci` and `npm run build` in this repository. The CLI uses an operating system file lock to share storage with the web server. Keep one database per storage directory. Keep all processes on the same database and snapshot paths.
 
 See the [HTTP API](API.md) for payload fields and the [development guide](DEVELOPMENT.md) for temporary-storage checks.
 
@@ -9,17 +9,17 @@ See the [HTTP API](API.md) for payload fields and the [development guide](DEVELO
 For an existing database without a snapshot, create the first snapshot:
 
 ```sh
-uv run python cli.py sync export
-uv run python cli.py sync validate
+npx @andrestobelem/clone sync export
+npx @andrestobelem/clone sync validate
 ```
 
-For a new workspace, use `uv run python cli.py init`. Use `init --demo` to load demo data. To restore a workspace from Git, use `uv run python cli.py sync import` instead of `init`.
+For a new workspace, use `npx @andrestobelem/clone init`. Use `init --demo` to load demo data. To restore a workspace from Git, use `npx @andrestobelem/clone sync import` instead of `init`.
 
-Start the web server with `uv run python cli.py serve` or `uv run python server.py`. The server can create a demo database on first launch if no snapshot exists. Stop an old server before you start the updated server. Queries do not create a database or load demo data.
+Start the web server with `npx @andrestobelem/clone`. The server creates an empty database on first launch if no snapshot exists. Stop an old server before you start the updated server. Queries do not create a database or load demo data.
 
 ## Commands
 
-Use `uv run python cli.py --help` or add `--help` to any command. Global options can appear before or after the command:
+Use `npx @andrestobelem/clone --help` or add `--help` to any command. Global options can appear before or after the command:
 
 - `--db PATH`: SQLite file. Direct CLI use defaults to `data/workspace.sqlite3`.
 - `--sync-dir PATH`: snapshot directory. The default is `snapshot/` next to the database.
@@ -58,35 +58,35 @@ Issues use their identifier, such as `PRO-248`. Other entities use their numeric
 The following commands are separate examples. Replace IDs and identifiers with values from your workspace. Use the identifier returned by `issues create` for later issue commands. External agents must also add their registered `--actor ID` to each write.
 
 ```sh
-uv run python cli.py issues create --team-id 1 --title 'Fix search' --priority High
-uv run python cli.py issues update PRO-249 --status 'In Progress'
-uv run python cli.py issues comment PRO-249 --body 'Started work'
-uv run python cli.py issues create --team-id 1 --title 'Check keyboard input' --parent-id 13
-uv run python cli.py issues attach PRO-249 --file ./notes.txt
-uv run python cli.py attachments get 1 --output ./download.txt
-uv run python cli.py projects post-update 1 --body 'Search is ready' --health 'On track'
-uv run python cli.py inbox read-selected --ids '[1,2]'
-uv run python cli.py search search --scope Issues
-uv run python cli.py recurring run
+npx @andrestobelem/clone issues create --team-id 1 --title 'Fix search' --priority High
+npx @andrestobelem/clone issues update PRO-249 --status 'In Progress'
+npx @andrestobelem/clone issues comment PRO-249 --body 'Started work'
+npx @andrestobelem/clone issues create --team-id 1 --title 'Check keyboard input' --parent-id 13
+npx @andrestobelem/clone issues attach PRO-249 --file ./notes.txt
+npx @andrestobelem/clone attachments get 1 --output ./download.txt
+npx @andrestobelem/clone projects post-update 1 --body 'Search is ready' --health 'On track'
+npx @andrestobelem/clone inbox read-selected --ids '[1,2]'
+npx @andrestobelem/clone search search --scope Issues
+npx @andrestobelem/clone recurring run
 ```
 
 Use `--data @file.json`, `--data -` for stdin, or a JSON object for a complete payload. Payload fields use the current API names, such as `teamId`, `labelIds`, and `subscriberIds`. Flags override the matching fields in `--data`. `--actor` overrides payload `actorId`, including the default actor 1. Use JSON `null` to clear a field. Array and object flags accept JSON.
 
 ```sh
-uv run python cli.py issues update PRO-249 --data '{"assigneeId":null,"labelIds":[1,2]}'
-uv run python cli.py views create --name Urgent --filters '{"priority":"Urgent"}'
-uv run python cli.py settings update --key preferences --value '{"defaultHome":"Home"}'
+npx @andrestobelem/clone issues update PRO-249 --data '{"assigneeId":null,"labelIds":[1,2]}'
+npx @andrestobelem/clone views create --name Urgent --filters '{"priority":"Urgent"}'
+npx @andrestobelem/clone settings update --key preferences --value '{"defaultHome":"Home"}'
 ```
 
-`issues import --data @issues.json --dry-run` previews the existing issue import. The input is an object with an `issues` array. `uv run python cli.py export` writes the existing UI JSON export to stdout. That export is not a complete database backup. Use `sync export` for Git storage.
+`issues import --data @issues.json --dry-run` previews the existing issue import. The input is an object with an `issues` array. `npx @andrestobelem/clone export` writes the existing UI JSON export to stdout. That export is not a complete database backup. Use `sync export` for Git storage.
 
 ## Git workflow
 
 The web server, CLI, and recurring issue scheduler export after each change. With the direct CLI defaults, the complete snapshot is stored in `data/snapshot/`. SQLite, local sync state, and backups stay outside Git. Other database paths use a `snapshot/` directory next to the database unless `--sync-dir` selects another directory.
 
 ```sh
-uv run python cli.py sync status
-uv run python cli.py sync validate
+npx @andrestobelem/clone sync status
+npx @andrestobelem/clone sync validate
 git add data/snapshot
 git commit -m 'chore(data): save workspace changes'
 ```
@@ -95,9 +95,9 @@ Before you pull, save your local changes in Git. After you pull or edit snapshot
 
 ```sh
 git pull
-uv run python cli.py sync validate
-uv run python cli.py sync import --dry-run
-uv run python cli.py sync import
+npx @andrestobelem/clone sync validate
+npx @andrestobelem/clone sync import --dry-run
+npx @andrestobelem/clone sync import
 ```
 
 Import replaces the complete database. A record missing from the snapshot is deleted. IDs, dates, history, preferences, inactive members, archived records, and attachment bytes are preserved. Import does not trigger automations or create activity events. An empty snapshot is supported. It will need workspace and member records before normal issue operations can resume.
@@ -125,7 +125,7 @@ The internal `__sync_meta` SQLite table stores only the recovery marker. It is e
 Run the test suite with:
 
 ```sh
-uv run python -m unittest discover -s tests -v
+npm run check
 ```
 
 
@@ -141,7 +141,7 @@ The API adds `GET /api/actors`, `GET /api/actors/ID`, `GET /api/agents`, and `GE
 
 ## Discovery and errors
 
-`uv run python cli.py describe` returns a format-version-1 command catalog without opening storage. Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
+`npx @andrestobelem/clone describe` returns a format-version-1 command catalog without opening storage. Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
 
 With `--json`, each error is one JSON object on stderr. Stdout is empty on failure. Errors contain `code`, `message`, and `exitCode`.
 
@@ -157,7 +157,7 @@ A `pending_export` error also contains `committed: true` and `recoveryRequired: 
 
 ## Upgrade older storage
 
-Stop the web server before a database upgrade. Use `sync export` to save database changes outside synchronization, or validate and import intended snapshot edits before migration. Import can also upgrade an older database when it replaces its contents. Run `uv run python cli.py sync status`, then `uv run python cli.py sync migrate`. Migration checks for conflicts, makes a backup of the database, attachments, and snapshot, and converts human references to actor references. It preserves IDs and history. A second migration reports `migrated: false`. Read commands on an old database request migration without changing its schema.
+Stop the web server before a database upgrade. Use `sync export` to save database changes outside synchronization, or validate and import intended snapshot edits before migration. Import can also upgrade an older database when it replaces its contents. Run `npx @andrestobelem/clone sync status`, then `npx @andrestobelem/clone sync migrate`. Migration checks for conflicts, makes a backup of the database, attachments, and snapshot, and converts human references to actor references. It preserves IDs and history. A second migration reports `migrated: false`. Read commands on an old database request migration without changing its schema.
 
 Format-1 snapshots are accepted by validation and import preview. Validation converts records in memory. Preview preserves the snapshot and does not create a database. Import creates actor identities for members and publishes a format-2 snapshot. Exports from upgraded databases use format 2. An export from an older database uses format 1 so changes can be saved before migration. Old app versions cannot read format 2. All processes that share storage must use the updated code.
 
@@ -168,7 +168,7 @@ See the [API payload reference](API.md#common-payloads) for fields and supported
 Issue creation accepts `--milestone-id` and an object, text, or null for `recurringRule`. New issues use the team's default workflow status unless `--status` is supplied. A team move resolves status in the destination team, retains the issue identifier, and keeps that identifier reserved. Clear or replace incompatible project, cycle, and milestone references in the same payload.
 
 ```sh
-uv run python cli.py issues update PRO-248 --team-id 2 --status Todo --data '{"projectId":null,"cycleId":null,"milestoneId":null}'
+npx @andrestobelem/clone issues update PRO-248 --team-id 2 --status Todo --data '{"projectId":null,"cycleId":null,"milestoneId":null}'
 ```
 
 Use `[]` to clear list relationships. A label or subscriber update records activity and runs issue update automations. `attachments get --output` must point outside the database storage directory and the snapshot directory; it cannot replace recovery files, backups, or SQLite files.

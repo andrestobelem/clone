@@ -10,30 +10,25 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install uv and Python
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
-          enable-cache: true
-          python-version: "3.14"
+          node-version: 24.15.0
+          cache: npm
 
-      - name: Prepare environment
-        run: uv sync --locked
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Check Python
-        run: |
-          uv run python -m py_compile cli.py server.py workspace.py workspace_agents.py workspace_issues.py workspace_projects.py workspace_teams.py snapshot.py validation.py
-          uv run python -m unittest discover -s tests -v
+      - name: Check application
+        run: npm run check
 
-      - name: Check browser JavaScript
-        run: |
-          node --check app.js
-          node --check npm/bin/clone.js
-          node --test tests/test_ui.js tests/test_npm.js
+      - name: Check package
+        run: npm pack --dry-run
 
       - name: Check repository diff
         run: git diff --check

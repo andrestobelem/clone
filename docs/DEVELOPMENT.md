@@ -4,74 +4,49 @@ Read [repository instructions](../AGENTS.md) and [the glossary](../GLOSSARY.md) 
 
 ## Safe local setup
 
-Run from the repository root with the Python 3.14 environment. Run `uv sync --locked` first. Use an unused directory to separate demo data from real records:
+Install Node.js 24.15 or later. Then run `npm ci` from the repository root. Use an unused directory to keep test data separate from real records:
 
 ```sh
-uv run python cli.py --db /tmp/clone-check/workspace.sqlite3 init --demo
-PORT=4174 uv run python cli.py --db /tmp/clone-check/workspace.sqlite3 serve
+npm run build
+node bin/clone.js --data-dir /tmp/clone-check init --demo
+node bin/clone.js --data-dir /tmp/clone-check serve --port 4174
 ```
 
-Open [http://127.0.0.1:4174](http://127.0.0.1:4174). Stop the server with Ctrl+C. Reuse the same database path to test restart. For a workspace without teams, create a second unused directory and run `init` without `--demo`.
+Open [http://127.0.0.1:4174](http://127.0.0.1:4174). Stop the server with Ctrl+C. Reuse the same data directory to test restart. Run `init` without `--demo` to test an empty workspace.
 
-Use the CLI for workspace actions. Test fixtures can build invalid records or inject failures in temporary storage. Do not run import, migration, forced synchronization, or demo initialization against real storage for a code check.
+Use the CLI for workspace actions. Tests can build invalid records or inject failures in temporary storage. Do not run import, migration, forced synchronization, or demo initialization against real storage.
 
 ## Automated checks
 
 ```sh
-uv run python -m unittest discover -s tests -v
-uv run python -m py_compile cli.py server.py workspace.py workspace_agents.py workspace_issues.py workspace_projects.py workspace_teams.py snapshot.py validation.py
+npm run check
+npm pack --dry-run
 ```
 
-The tests use temporary directories and loopback HTTP servers. They do not need a running application or change repository snapshots. They cover actor identities, CLI/HTTP action parity, invalid payloads, relationships, attachments, concurrent writes, stable snapshots, migration, and interrupted-operation recovery.
+The checks format and type-check the TypeScript source. They also run the runtime, storage, command-contract, and UI model tests. The tests use temporary directories and do not change repository snapshots. GitHub Actions runs the same checks on each pull request and each push to `main`.
 
-GitHub Actions runs these checks on each pull request and each push to `main`.
-
-If Node.js 18 or later is already available, run `node --check app.js`, `node --check npm/bin/clone.js`, and `node --test tests/test_ui.js tests/test_npm.js`. The tests cover the UI model and the npm launcher. Node.js is optional for source use.
-
-Add a regression test for each behavior bug. Test results and rejected changes, including unchanged storage after failure. Do not add tests that only copy implementation details. Run the complete suite after changes to shared actions or storage.
+Add a regression test for each behavior bug. Test rejected changes and confirm that storage remains unchanged after failure. Do not add tests that only copy implementation details.
 
 ## Browser checks
 
 Reload after changes because there is no hot reload. Use temporary storage for this checklist:
 
-- Start both a demo workspace and a workspace without teams. Confirm the empty state offers team creation and Settings opens.
-- Create an issue. Switch its team in the form and check status, project, cycle, and label options. Edit its title, status, assignment, and dates; add a comment and attachment.
-- Create a custom Completed status. Check Active, completed visibility, triage, and progress against that category.
-- Check issue list/board, filters, grouping, empty status groups, and sorting. Open a row with Enter and Space.
-- Create and edit a project. Check linked teams, participants, milestones, updates, dependencies, archive, and restore.
-- Save a team view. Switch teams, open the view, and confirm its team, title, filters, and display settings. Confirm Team views does not show another team's views.
-- Check Inbox unread, individual, and selected-item actions. Check team selection, cycles, human rosters, and local preferences.
-- Search, change the query, change scope, and close before a response. Check that closed dialogs stay closed and older results do not replace newer ones.
-- Use Tab, Shift+Tab, and Escape in dialogs. Confirm visible focus, background isolation, accessible control names, and focus return.
-- Check desktop and narrow layouts. Confirm there are no unexpected console errors.
-- Refresh and restart the server. Confirm saved records remain.
+- Start both a demo workspace and a workspace without teams. Confirm that the empty state offers team creation and Settings opens.
+- Create an issue. Edit its title, status, assignment, dates, comment, and attachment.
+- Create a custom Completed status. Check Active, completed visibility, triage, and progress.
+- Check issue list and board layouts, filters, grouping, empty groups, and sorting.
+- Create and edit a project. Check teams, participants, milestones, updates, dependencies, archive, and restore.
+- Save a team view. Confirm that another team's view does not appear.
+- Check Inbox actions, cycles, human rosters, and preferences.
+- Check search result ordering while the query changes.
+- Use Tab, Shift+Tab, and Escape in dialogs. Confirm visible focus and focus return.
+- Check desktop and narrow layouts. Confirm that the browser console has no unexpected errors.
+- Refresh and restart the server. Confirm that records remain.
 
 ## Documentation and delivery
 
 Treat the implementation and tests as evidence for current behavior. Keep historical observations in [the reference audit](REFERENCE-AUDIT.md), not in current requirements.
 
-Check relative links, command help, examples, route tables, and the glossary. Run examples that write data only in temporary storage. Use valid payload fields; [the command catalog](CLI.md#discovery-and-errors) lists flags but does not describe every business requirement.
+Check relative links, command help, examples, routes, and glossary terms. Run examples only with temporary storage. Review `git diff --check`, the final diff, and `git status --short`. Do not include workspace data, backups, generated packages, bytecode, or browser artifacts.
 
-Review `git diff --check`, the final diff, and `git status --short`. Preserve earlier uncommitted work. Do not include temporary storage, backups, bytecode, or browser artifacts. Use atomic Conventional Commits when commits are requested, without co-author trailers.
-
-Build a release only from a clean commit with `sh scripts/build-release.sh`. Inspect the archive before publication. Confirm that it contains no `data/snapshot/`, database, attachment, backup, or synchronization state.
-
-Check the npm file list and build the executable for the current platform:
-
-```sh
-npm pack ./npm --dry-run
-uv sync --locked --group package
-uv run --group package python scripts/build-binary.py
-```
-
-Run the launcher against the local executable without a download. Use the executable name produced for the current platform:
-
-```sh
-CLONE_BINARY_PATH="$PWD/dist/bin/clone-darwin-arm64" \
-CLONE_DATA_DIR="$(mktemp -d)" \
-node npm/bin/clone.js start --no-open
-```
-
-Stop with Ctrl+C.
-
-Report what changed, which checks passed, and any behavior that remains unverified. Do not claim full feature parity or full accessibility compliance from smoke checks.
+Before release, run `npm pack --dry-run`. Inspect the file list. Install the generated tarball in a temporary directory and run `clone --local init --demo`. Do not create a tag or publish npm without approval.
