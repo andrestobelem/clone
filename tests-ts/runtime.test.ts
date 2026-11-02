@@ -355,7 +355,9 @@ describe("CLI contract", () => {
               : path.join(root, "global-data", "workspace.sqlite3");
       expect(context).toEqual({
         formatVersion: 1,
+        cliVersion: expect.any(String),
         storageMode,
+        actorSelection: { actorId: 1, source: "legacy-default" },
         database: expectedDatabase,
         dataDirectory: path.dirname(expectedDatabase),
         snapshotDirectory: syncDirectory,
@@ -369,6 +371,55 @@ describe("CLI contract", () => {
       expect(fs.existsSync(syncDirectory)).toBe(false);
     },
   );
+
+  it("resolves explicit actor selectors and rejects conflicts", () => {
+    const selected = runTypeScript(["--actor", "7", "context", "--json"], {
+      environment: { CLONE_ACTOR_ID: "7" },
+    });
+    expect(selected.status, selected.stderr).toBe(0);
+    expect(JSON.parse(selected.stdout)).toMatchObject({
+      actorSelection: { actorId: 7, source: "flag" },
+    });
+
+    const conflict = runTypeScript(["--actor", "7", "context", "--json"], {
+      environment: { CLONE_ACTOR_ID: "8" },
+    });
+    expect(conflict.status).toBe(2);
+    expect(JSON.parse(conflict.stderr)).toMatchObject({
+      code: "invalid_input",
+      message: "Actor selectors must identify the same actor",
+    });
+  });
+
+  it("warns when a mutation uses the temporary actor fallback", () => {
+    const root = temporaryDirectory();
+    const database = path.join(root, "workspace.sqlite3");
+    const snapshot = path.join(root, "snapshot");
+    expect(
+      runTypeScript([
+        "--db",
+        database,
+        "--sync-dir",
+        snapshot,
+        "init",
+        "--demo",
+        "--json",
+      ]).status,
+    ).toBe(0);
+    const result = runTypeScript([
+      "--db",
+      database,
+      "--sync-dir",
+      snapshot,
+      "issues",
+      "create",
+      "--title",
+      "Fallback",
+      "--json",
+    ]);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("temporary fallback");
+  });
 
   it.each([
     ["--local and --data-dir", ["--local", "--data-dir", "data"]],

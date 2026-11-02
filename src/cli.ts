@@ -142,7 +142,7 @@ async function execute(
   const action = actions[parsed.command]?.[parsed.verb ?? ""];
   if (!action) throw new InvalidInputError("Unknown command");
   const payload = readPayload(parsed);
-  const actor = numberOption(parsed.options.actor, 1);
+  const actor = resolveActor(parsed, payload, true).actorId;
   payload.actorId = actor;
   let route = action.route
     .replace("{id}", parsed.positionals[0] ?? "")
@@ -525,13 +525,48 @@ function storageContext(parsed: Parsed) {
         : "global";
   return {
     formatVersion: 1,
+    cliVersion: packageVersion,
     storageMode,
+    actorSelection: resolveActor(parsed, {}, false),
     database: paths.database,
     dataDirectory: paths.dataDirectory,
     snapshotDirectory: paths.snapshotDirectory,
     attachmentsDirectory: paths.attachmentsDirectory,
     backupsDirectory: paths.backupsDirectory,
   };
+}
+
+function resolveActor(
+  parsed: Parsed,
+  payload: JsonObject,
+  warnOnLegacy: boolean,
+): {
+  actorId: number;
+  source: "flag" | "environment" | "payload" | "legacy-default";
+} {
+  const candidates = [
+    parsed.options.actor !== undefined
+      ? { source: "flag" as const, actorId: numberOption(parsed.options.actor) }
+      : null,
+    process.env.CLONE_ACTOR_ID !== undefined
+      ? {
+          source: "environment" as const,
+          actorId: numberOption(process.env.CLONE_ACTOR_ID),
+        }
+      : null,
+    payload.actorId !== undefined
+      ? { source: "payload" as const, actorId: numberOption(payload.actorId) }
+      : null,
+  ].filter((value): value is NonNullable<typeof value> => value !== null);
+  if (new Set(candidates.map(({ actorId }) => actorId)).size > 1)
+    throw new InvalidInputError("Actor selectors must identify the same actor");
+  const selected = candidates[0];
+  if (selected) return selected;
+  if (warnOnLegacy)
+    console.error(
+      "Warning: actor 1 is a temporary fallback. Use --actor or CLONE_ACTOR_ID. Clone 0.4 will require an actor.",
+    );
+  return { actorId: 1, source: "legacy-default" };
 }
 function resolveDatabasePath(parsed: Parsed): string {
   let directory: string;
