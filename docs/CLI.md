@@ -1,6 +1,6 @@
 # CLI and Git snapshots
 
-Clone requires Node.js 24.15 or later. Run it with `npx @andrestobelem/clone`, or use `node bin/clone.js` after `npm ci` and `npm run build` in this repository. The CLI uses an operating system file lock to share storage with the web server. Keep one database per storage directory. Keep all processes on the same database and snapshot paths.
+Clone requires Node.js 24.15 or later. Run it with `npx @andrestobelem/clone@0.3.0`, or use `node bin/clone.js` after `npm ci` and `npm run build` in this repository. The CLI uses an operating system file lock to share storage with the web server. Keep one database per storage directory. Keep all processes on the same database and snapshot paths.
 
 See the [HTTP API](API.md) for payload fields and the [development guide](DEVELOPMENT.md) for temporary-storage checks.
 
@@ -9,17 +9,17 @@ See the [HTTP API](API.md) for payload fields and the [development guide](DEVELO
 For an existing database without a snapshot, create the first snapshot:
 
 ```sh
-npx @andrestobelem/clone sync export
-npx @andrestobelem/clone sync validate
+npx @andrestobelem/clone@0.3.0 sync export
+npx @andrestobelem/clone@0.3.0 sync validate
 ```
 
-For a new workspace, use `npx @andrestobelem/clone init`. Use `init --demo` to load demo data. To restore a workspace from Git, use `npx @andrestobelem/clone sync import` instead of `init`.
+For a new workspace, use `npx @andrestobelem/clone@0.3.0 init`. Use `init --demo` to load demo data. To restore a workspace from Git, use `npx @andrestobelem/clone@0.3.0 sync import` instead of `init`.
 
-Start the web server with `npx @andrestobelem/clone`. The server creates an empty database on first launch if no snapshot exists. Stop an old server before you start the updated server. Queries do not create a database or load demo data.
+Start the web server with `npx @andrestobelem/clone@0.3.0`. The server creates an empty database on first launch if no snapshot exists. Stop an old server before you start the updated server. Queries do not create a database or load demo data.
 
 ## Commands
 
-Use `npx @andrestobelem/clone --help` or add `--help` to any command. Global options can appear before or after the command:
+Use `npx @andrestobelem/clone@0.3.0 --help` or add `--help` to any command. Global options can appear before or after the command:
 
 - `--local`: use `./.clone/` in the current directory.
 - `--data-dir PATH`: use an explicit storage directory.
@@ -69,39 +69,39 @@ Issues use their identifier, such as `PRO-248`. Other entities use their numeric
 The following commands are separate examples. Replace IDs and identifiers with values from your workspace. Use the identifier returned by `issues create` for later issue commands. External agents must also add their registered `--actor ID` to each write.
 
 ```sh
-npx @andrestobelem/clone issues create --team-id 1 --title 'Fix search' --priority High
-npx @andrestobelem/clone issues update PRO-249 --status 'In Progress'
-npx @andrestobelem/clone issues comment PRO-249 --body 'Started work'
-npx @andrestobelem/clone issues create --team-id 1 --title 'Check keyboard input' --parent-id 13
-npx @andrestobelem/clone issues attach PRO-249 --file ./notes.txt
-npx @andrestobelem/clone attachments get 1 --output ./download.txt
-npx @andrestobelem/clone projects post-update 1 --body 'Search is ready' --health 'On track'
-npx @andrestobelem/clone inbox read-selected --ids '[1,2]'
-npx @andrestobelem/clone search search --scope Issues
-npx @andrestobelem/clone recurring run
+npx @andrestobelem/clone@0.3.0 issues create --actor 1 --team-id 1 --title 'Fix search' --priority High
+npx @andrestobelem/clone@0.3.0 issues update PRO-249 --actor 1 --if-revision 1 --status 'In Progress'
+npx @andrestobelem/clone@0.3.0 issues comment PRO-249 --actor 1 --body 'Started work'
+npx @andrestobelem/clone@0.3.0 issues create --actor 1 --team-id 1 --title 'Check keyboard input' --parent-id 13
+npx @andrestobelem/clone@0.3.0 issues attach PRO-249 --actor 1 --file ./notes.txt
+npx @andrestobelem/clone@0.3.0 attachments get 1 --output ./download.txt
+npx @andrestobelem/clone@0.3.0 projects post-update 1 --actor 1 --body 'Search is ready' --health 'On track'
+npx @andrestobelem/clone@0.3.0 inbox read-selected --actor 1 --ids '[1,2]'
+npx @andrestobelem/clone@0.3.0 search search --scope Issues
+npx @andrestobelem/clone@0.3.0 recurring run
 ```
 
-Use `--data @file.json`, `--data -` for stdin, or a JSON object for a complete payload. Payload fields use the current API names, such as `teamId`, `labelIds`, and `subscriberIds`. Flags override the matching fields in `--data`. `--actor` overrides payload `actorId`, including the default actor 1. Use JSON `null` to clear a field. Array and object flags accept JSON.
+Use `--data @file.json`, `--data -` for stdin, or a JSON object for a complete payload. Payload fields use the current API names, such as `teamId`, `labelIds`, and `subscriberIds`. Flags override the matching fields in `--data`. `--actor` takes precedence over `CLONE_ACTOR_ID` and payload `actorId`; selectors must agree. Use JSON `null` to clear a field. Array and object flags accept JSON.
 
 List commands return `{ "items": [], "page": { "nextCursor": null } }`. Use `--limit` and the returned opaque `--cursor` to read another page. The default limit is 100 and the maximum is 500.
 
 Changes to existing records require `--if-revision NUMBER`. Read the record again and retry with its current revision after a `record_conflict` error.
 
 ```sh
-npx @andrestobelem/clone issues update PRO-249 --data '{"assigneeId":null,"labelIds":[1,2]}'
-npx @andrestobelem/clone views create --name Urgent --filters '{"priority":"Urgent"}'
-npx @andrestobelem/clone settings update --key preferences --value '{"defaultHome":"Home"}'
+npx @andrestobelem/clone@0.3.0 issues update PRO-249 --actor 1 --if-revision 1 --data '{"assigneeId":null,"labelIds":[1,2]}'
+npx @andrestobelem/clone@0.3.0 views create --actor 1 --name Urgent --filters '{"priority":"Urgent"}'
+npx @andrestobelem/clone@0.3.0 settings update --actor 1 --if-revision 1 --key preferences --value '{"defaultHome":"Home"}'
 ```
 
-`issues import --data @issues.json --dry-run` previews the existing issue import. The input is an object with an `issues` array. `npx @andrestobelem/clone export` writes the existing UI JSON export to stdout. That export is not a complete database backup. Use `sync export` for Git storage.
+`issues import --data @issues.json --dry-run` previews the existing issue import. The input is an object with an `issues` array. `npx @andrestobelem/clone@0.3.0 export` writes the existing UI JSON export to stdout. That export is not a complete database backup. Use `sync export` for Git storage.
 
 ## Git workflow
 
 The web server, CLI, and recurring issue scheduler export after each change. With the direct CLI defaults, the complete snapshot is stored in `data/snapshot/`. SQLite, local sync state, and backups stay outside Git. Other database paths use a `snapshot/` directory next to the database unless `--sync-dir` selects another directory.
 
 ```sh
-npx @andrestobelem/clone sync status
-npx @andrestobelem/clone sync validate
+npx @andrestobelem/clone@0.3.0 sync status
+npx @andrestobelem/clone@0.3.0 sync validate
 git add data/snapshot
 git commit -m 'chore(data): save workspace changes'
 ```
@@ -110,9 +110,9 @@ Before you pull, save your local changes in Git. After you pull or edit snapshot
 
 ```sh
 git pull
-npx @andrestobelem/clone sync validate
-npx @andrestobelem/clone sync import --dry-run
-npx @andrestobelem/clone sync import
+npx @andrestobelem/clone@0.3.0 sync validate
+npx @andrestobelem/clone@0.3.0 sync import --dry-run
+npx @andrestobelem/clone@0.3.0 sync import
 ```
 
 Import replaces the complete database. A record missing from the snapshot is deleted. IDs, dates, history, preferences, inactive members, archived records, and attachment bytes are preserved. Import does not trigger automations or create activity events. An empty snapshot is supported. It will need workspace and member records before normal issue operations can resume.
@@ -127,7 +127,7 @@ Unused document, review, and agent chat tables are deleted on startup, export, i
 
 ## File format and recovery
 
-`manifest.json` records format version 2, all supported tables, their columns, and their primary keys. Each supported application table has one JSON file per row. Internal SQLite sequence and synchronization token tables are not exported. Filenames use `row-` followed by the primary key. Composite keys use `--` between values. String keys use URL encoding. Empty tables need no directory. The manifest still declares them.
+`manifest.json` records format version 3, all supported tables, their columns, and their primary keys. Each supported application table has one JSON file per row. Internal SQLite sequence and synchronization token tables are not exported. Filenames use `row-` followed by the primary key. Composite keys use `--` between values. String keys use URL encoding. Empty tables need no directory. The manifest still declares them.
 
 JSON uses UTF-8, two-space indentation, sorted field names, and a final newline. Stored JSON columns remain JSON strings to preserve their exact database values. Attachment metadata stays in `issue_attachments/`. Attachment files use their stored names under `attachments/`.
 
@@ -156,11 +156,11 @@ The API adds `GET /api/actors`, `GET /api/actors/ID`, `GET /api/agents`, and `GE
 
 ## Discovery and errors
 
-`npx @andrestobelem/clone describe` returns the complete format-version-1 command catalog without opening storage. Add a command path prefix to return only matching contracts. For example, `describe issues` returns all issue commands and `describe issues comment` returns one command. An unknown path returns `invalid_input`. A close path also returns up to three canonical suggestions in the JSON `suggestions` field.
+`npx @andrestobelem/clone@0.3.0 describe` returns the complete format-version-2 command catalog without opening storage. Add a command path prefix to return only matching contracts. For example, `describe issues` returns all issue commands and `describe issues comment` returns one command. An unknown path returns `invalid_input`. A close path also returns up to three canonical suggestions in the JSON `suggestions` field.
 
 Each command has a path and argument records. These records contain flag names, types, required status, defaults or default rules, choices where defined, and whether the flag can repeat. The `--db` default is the resolved path for the current `--local` or `--data-dir` selection. Resolution does not open storage. The catalog describes parser arguments. Required payload fields are validated by the shared actions.
 
-For agent workflows and strict JSON pipelines, run `npx --yes --loglevel=error @andrestobelem/clone`. The extra options suppress npm notices. Clone does not control output written by the parent npm process.
+For agent workflows and strict JSON pipelines, run `npx --yes --loglevel=error @andrestobelem/clone@0.3.0`. The extra options suppress npm notices. Clone does not control output written by the parent npm process. Install the same package as a local development dependency and use `npx --no-install clone` for repeated operations.
 
 With `--json`, each error is one JSON object on stderr. Stdout is empty on failure. Errors contain `code`, `message`, and `exitCode`.
 
@@ -176,9 +176,9 @@ A `pending_export` error also contains `committed: true` and `recoveryRequired: 
 
 ## Upgrade older storage
 
-Stop the web server before a database upgrade. Use `sync export` to save database changes outside synchronization, or validate and import intended snapshot edits before migration. Import can also upgrade an older database when it replaces its contents. Run `npx @andrestobelem/clone sync status`, then `npx @andrestobelem/clone sync migrate`. Migration checks for conflicts, makes a backup of the database, attachments, and snapshot, and converts human references to actor references. It preserves IDs and history. A second migration reports `migrated: false`. Read commands on an old database request migration without changing its schema.
+Stop the web server before a database upgrade. Use `sync export` to save database changes outside synchronization, or validate and import intended snapshot edits before migration. Import can also upgrade an older database when it replaces its contents. Run `npx @andrestobelem/clone@0.3.0 sync status`, then `npx @andrestobelem/clone@0.3.0 sync migrate`. Migration checks for conflicts, makes a backup of the database, attachments, and snapshot, and adds the Workspace ID and Record revisions. It preserves IDs and history. A second migration reports `migrated: false`. Read commands on an old database request migration without changing its schema.
 
-Format-1 snapshots are accepted by validation and import preview. Validation converts records in memory. Preview preserves the snapshot and does not create a database. Import creates actor identities for members and publishes a format-2 snapshot. Exports from upgraded databases use format 2. An export from an older database uses format 1 so changes can be saved before migration. Old app versions cannot read format 2. All processes that share storage must use the updated code.
+Format-1 and format-2 snapshots are accepted by validation and import preview. Validation converts records in memory. Preview preserves the snapshot and does not create a database. Import adds actor identities when required, a Workspace ID, Record revisions, and publishes a format-3 snapshot. Exports from upgraded databases use format 3. An export from an older database keeps its source format so changes can be saved before migration. Old app versions cannot use format 3 safely. All processes that share storage must use the updated code.
 
 ## Input and relationship checks
 
@@ -187,7 +187,7 @@ See the [API payload reference](API.md#common-payloads) for fields and supported
 Issue creation accepts `--milestone-id` and an object, text, or null for `recurringRule`. New issues use the team's default workflow status unless `--status` is supplied. A team move resolves status in the destination team, retains the issue identifier, and keeps that identifier reserved. Clear or replace incompatible project, cycle, and milestone references in the same payload.
 
 ```sh
-npx @andrestobelem/clone issues update PRO-248 --team-id 2 --status Todo --data '{"projectId":null,"cycleId":null,"milestoneId":null}'
+npx @andrestobelem/clone@0.3.0 issues update PRO-248 --actor 1 --if-revision 1 --team-id 2 --status Todo --data '{"projectId":null,"cycleId":null,"milestoneId":null}'
 ```
 
 Use `[]` to clear list relationships. A label or subscriber update records activity and runs issue update automations. `attachments get --output` must point outside the database storage directory and the snapshot directory; it cannot replace recovery files, backups, or SQLite files.

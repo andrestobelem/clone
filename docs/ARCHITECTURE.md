@@ -71,7 +71,7 @@ The CLI, HTTP server, and scheduler share this lock. Do not use a separate lock 
 
 Installed use defaults to the operating system's user data directory. `--local` uses `./.clone/`. `--data-dir` selects an explicit directory. Repository development uses `data/clone/`. Attachments, backups, and `.sync-*` state files are next to the selected database. The default snapshot is `snapshot/` next to that database; `--sync-dir` can select another directory.
 
-SQLite uses foreign keys and WAL mode. Snapshots contain all supported table rows and referenced attachment bytes. IDs, timestamps, inactive actors, archives, and history are retained. The manifest describes format version 2. Format-1 import creates member actors; explicit migration upgrades an existing database.
+SQLite uses foreign keys and WAL mode. Snapshots contain all supported table rows and referenced attachment bytes. IDs, timestamps, inactive actors, archives, and history are retained. The manifest describes format version 3. Format-1 import creates member actors; format-1 and format-2 import adds format-3 workspace metadata.
 
 Format 3 adds a stable Workspace ID, Record revisions, and append-only Work evidence. A caller supplies the revision it read before it changes an existing record. The shared mutation dispatcher checks and advances that revision inside the write transaction. A Batch invokes the same dispatcher for each operation and publishes one snapshot only after the complete transaction commits.
 
@@ -97,4 +97,4 @@ The default bind address is `127.0.0.1`. `CLONE_HOST` can change it, but the app
 
 ## Distribution
 
-The root npm package contains the compiled TypeScript runtime and static UI. It does not download a platform executable. `npx @andrestobelem/clone` runs the package executable. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory.
+The root npm package contains the compiled TypeScript runtime and static UI. It does not download a platform executable. `npx @andrestobelem/clone@0.3.0` runs the package executable. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory.
