@@ -69,6 +69,15 @@ export const fieldTypes: Readonly<Record<string, FieldType>> = {
   capacity: "number",
   priority: "string",
   updatedSince: "string",
+  defaultHome: "string",
+  displayNames: "string",
+  firstDayOfWeek: "string",
+  commentSubmit: "string",
+  theme: "string",
+  fontSize: "string",
+  sidebar: "json",
+  autoAssignToSelf: "json",
+  spelling: "json",
 };
 
 export const resources: Readonly<Record<string, string>> = {
@@ -405,7 +414,18 @@ export const actions: Readonly<
     update: action(
       "PATCH",
       "/api/preferences",
-      ["value", "ifRevision"],
+      [
+        "defaultHome",
+        "displayNames",
+        "firstDayOfWeek",
+        "commentSubmit",
+        "theme",
+        "fontSize",
+        "sidebar",
+        "autoAssignToSelf",
+        "spelling",
+        "ifRevision",
+      ],
       ["ifRevision"],
     ),
   },
@@ -461,3 +481,24 @@ export const listFilters: Readonly<Record<string, readonly string[]>> = {
   statuses: ["teamId"],
   views: ["teamId"],
 };
+
+function routePattern(template: string): RegExp {
+  const escaped = template.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(
+    `^${escaped.replace("\\{id\\}", "[^/]+").replace("\\{resource_id\\}", "[^/]+")}$`,
+  );
+}
+
+export function actionForRoute(
+  method: string,
+  route: string,
+): ActionCommand | undefined {
+  for (const group of Object.values(actions))
+    for (const definition of Object.values(group))
+      if (
+        definition.method === method &&
+        routePattern(definition.route).test(route)
+      )
+        return definition;
+  return undefined;
+}

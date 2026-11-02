@@ -31,7 +31,7 @@ export function dispatchMutation(
   raw: unknown,
   paths: StoragePaths,
 ): MutationResult {
-  const data = mutationPayload(raw, route);
+  const data = mutationPayload(raw, route, method);
   const actor = requireActor(database, data.actorId ?? 1);
   validateActorFields(database, data, method, route);
   const stamp = now();

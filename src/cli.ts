@@ -341,7 +341,57 @@ function parseArguments(argv: string[]): Parsed {
       [command, ...(verb ? [verb] : []), ...words],
       `Unknown command path: ${[command, verb].filter(Boolean).join(" ")}`,
     );
-  return { command, verb, positionals: words, options };
+  const parsed = { command, verb, positionals: words, options };
+  validateCommandOptions(parsed);
+  return parsed;
+}
+
+function validateCommandOptions(parsed: Parsed): void {
+  const allowed = new Set([
+    "db",
+    "syncDir",
+    "local",
+    "dataDir",
+    "json",
+    "actor",
+  ]);
+  if (["start", "serve"].includes(parsed.command)) {
+    allowed.add("port");
+    allowed.add("open");
+  }
+  if (parsed.command === "init") allowed.add("demo");
+  if (parsed.command === "search") allowed.add("scope");
+  if (parsed.command === "attachments") allowed.add("output");
+  if (
+    parsed.command === "sync" &&
+    ["export", "import"].includes(parsed.verb ?? "")
+  ) {
+    allowed.add("dryRun");
+    allowed.add("force");
+  }
+  if (resources[parsed.command] && parsed.verb === "list") {
+    allowed.add("all");
+    allowed.add("limit");
+    allowed.add("cursor");
+    for (const field of listFilters[parsed.command] ?? []) allowed.add(field);
+  }
+  const definition = actions[parsed.command]?.[parsed.verb ?? ""];
+  if (definition) {
+    allowed.add("data");
+    allowed.add("actor");
+    for (const field of definition.fields) allowed.add(field);
+    if (parsed.command === "issues" && parsed.verb === "attach")
+      allowed.add("file");
+    if (parsed.command === "issues" && parsed.verb === "import")
+      allowed.add("dryRun");
+  }
+  const unknown = Object.keys(parsed.options).filter(
+    (key) => !allowed.has(key),
+  );
+  if (unknown.length)
+    throw new InvalidInputError(
+      `Unknown option${unknown.length === 1 ? "" : "s"}: ${unknown.map((key) => `--${kebab(key)}`).join(", ")}`,
+    );
 }
 
 function validateStorageSelection(

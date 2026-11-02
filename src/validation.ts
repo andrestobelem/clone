@@ -1,4 +1,5 @@
 import { InvalidInputError } from "./errors.js";
+import { actionForRoute } from "./commands.js";
 import type { JsonObject, JsonValue } from "./types.js";
 
 const cadences = new Set(["Daily", "Weekly", "Every 2 weeks", "Monthly"]);
@@ -11,12 +12,25 @@ const statusCategories = new Set([
   "Duplicate",
 ]);
 
-export function mutationPayload(value: unknown, route: string): JsonObject {
+export function mutationPayload(
+  value: unknown,
+  route: string,
+  method = "POST",
+): JsonObject {
   if (!isObject(value)) {
     throw new InvalidInputError("Request body must be an object");
   }
   assertJson(value);
   const result = structuredClone(value) as JsonObject;
+  const definition = actionForRoute(method, route);
+  if (definition) {
+    const allowed = new Set(["actorId", "files", ...definition.fields]);
+    const unknown = Object.keys(result).filter((field) => !allowed.has(field));
+    if (unknown.length)
+      fail(
+        `Unknown field${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}`,
+      );
+  }
 
   const textFields = [
     "title",

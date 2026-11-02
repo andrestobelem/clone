@@ -208,6 +208,22 @@ describe("CLI contract", () => {
     expect(names).not.toContain("health");
   });
 
+  it("rejects options outside the command contract", () => {
+    const result = runTypeScript([
+      "issues",
+      "update",
+      "PRO-248",
+      "--timezone",
+      "UTC",
+      "--json",
+    ]);
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      code: "invalid_input",
+      message: "Unknown option: --timezone",
+    });
+  });
+
   it.each([false, true])(
     "describes resolved database paths without opening storage (filtered: %s)",
     (filtered) => {

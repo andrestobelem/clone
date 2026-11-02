@@ -3,6 +3,15 @@ import { describe, expect, it } from "vitest";
 import { mutationPayload } from "../src/validation.js";
 
 describe("payload validation", () => {
+  it("rejects fields outside the route contract", () => {
+    expect(() =>
+      mutationPayload(
+        { title: "Valid", timezone: "UTC" },
+        "/api/issues",
+        "POST",
+      ),
+    ).toThrow("Unknown field: timezone");
+  });
   it.each([
     ["rejects arrays", [], "/api/issues", "Request body must be an object"],
     [
