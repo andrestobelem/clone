@@ -10,6 +10,7 @@ import {
   exportSnapshot,
   importSnapshot,
   initialize,
+  migrateStorage,
   mutate,
   syncStatus,
   validateSnapshot,
@@ -56,10 +57,47 @@ describe("storage and synchronization", () => {
     const result = validateSnapshot(demoWorkspace());
     expect(result).toMatchObject({
       valid: true,
-      formatVersion: 2,
+      formatVersion: 3,
       attachments: 0,
     });
     expect(Number(result.records)).toBeGreaterThan(40);
+  });
+
+  it("creates a format-3 workspace identity and revisions", () => {
+    const paths = demoWorkspace();
+    const value = read(paths, (database) => ({
+      version: database.prepare("PRAGMA user_version").get(),
+      workspace: database
+        .prepare("SELECT workspace_id,revision FROM workspace WHERE id=1")
+        .get(),
+      issue: database
+        .prepare("SELECT revision FROM issues ORDER BY id LIMIT 1")
+        .get(),
+    }));
+    expect(value.version).toEqual({ user_version: 3 });
+    expect(value.workspace).toMatchObject({ revision: 1 });
+    expect(
+      String((value.workspace as { workspace_id: string }).workspace_id),
+    ).toMatch(/^[0-9a-f-]{36}$/);
+    expect(value.issue).toEqual({ revision: 1 });
+  });
+
+  it("migrates a format-2 database with a backup", () => {
+    const paths = demoWorkspace();
+    const database = openDatabase(paths);
+    database.exec("PRAGMA user_version = 2");
+    database.close();
+    exportSnapshot(paths, undefined, { force: true });
+
+    expect(migrateStorage(paths)).toEqual({
+      migrated: true,
+      format_version: 3,
+    });
+    expect(fs.readdirSync(paths.backupsDirectory).length).toBeGreaterThan(0);
+    expect(validateSnapshot(paths)).toMatchObject({ formatVersion: 3 });
+    expect(
+      read(paths, (current) => current.prepare("PRAGMA user_version").get()),
+    ).toEqual({ user_version: 3 });
   });
 
   it("restores records from a snapshot", () => {

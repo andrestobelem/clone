@@ -4,7 +4,12 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import lockfile from "proper-lockfile";
 
-import { hasTable, openDatabase, type Database } from "./database.js";
+import {
+  hasTable,
+  openDatabase,
+  schemaVersion,
+  type Database,
+} from "./database.js";
 import {
   InvalidInputError,
   PendingExportError,
@@ -174,10 +179,10 @@ export function importSnapshot(
   options: { readonly force?: boolean; readonly dryRun?: boolean } = {},
 ): Record<string, unknown> {
   const loaded = loadSnapshot(paths);
-  const records =
-    loaded.manifest.format_version === 1
-      ? upgradeRecords(loaded.records)
-      : loaded.records;
+  const records = upgradeRecordsToCurrent(
+    loaded.records,
+    loaded.manifest.format_version,
+  );
   const candidatePath = path.join(
     paths.dataDirectory,
     `.sync-${path.basename(paths.database)}-import-${randomUUID()}.sqlite3`,
@@ -244,8 +249,8 @@ export function migrateStorage(paths: StoragePaths): Record<string, unknown> {
   const source = openDatabase(paths, { allowLegacy: true });
   try {
     recover(paths, source);
-    if (hasTable(source, "actors"))
-      return { migrated: false, format_version: 2 };
+    const sourceVersion = schemaVersion(source);
+    if (sourceVersion >= 3) return { migrated: false, format_version: 3 };
     checkFiles(paths, source);
     const manifest = schemaManifest(source);
     const records: Record<string, Row[]> = {};
@@ -255,7 +260,7 @@ export function migrateStorage(paths: StoragePaths): Record<string, unknown> {
         .prepare(`SELECT * FROM ${quoteIdentifier(table)} ORDER BY ${order}`)
         .all() as Row[];
     }
-    const upgraded = upgradeRecords(records);
+    const upgraded = upgradeRecordsToCurrent(records, sourceVersion);
     const candidatePath = path.join(
       paths.dataDirectory,
       `.sync-${path.basename(paths.database)}-migrate-${randomUUID()}.sqlite3`,
@@ -280,7 +285,7 @@ export function migrateStorage(paths: StoragePaths): Record<string, unknown> {
     const stage = stageFiles(paths, files);
     replaceDirectory(paths.snapshotDirectory, stage);
     saveState(paths, files, files);
-    return { migrated: true, format_version: 2 };
+    return { migrated: true, format_version: 3 };
   } finally {
     try {
       source.close();
@@ -306,7 +311,7 @@ export function syncStatus(paths: StoragePaths): Record<string, unknown> {
   if (databaseExists) {
     const database = openDatabase(paths, { allowLegacy: true });
     try {
-      migrationRequired = !hasTable(database, "actors");
+      migrationRequired = schemaVersion(database) < 3;
       databaseFilesValue = databaseFiles(paths, database);
     } finally {
       database.close();
@@ -425,7 +430,7 @@ function schemaManifest(database: Database): Manifest {
     };
   }
   return {
-    format_version: hasTable(database, "actors") ? 2 : 1,
+    format_version: schemaVersion(database),
     tables: specs,
   };
 }
@@ -460,7 +465,7 @@ function loadSnapshot(paths: StoragePaths): {
   if (!manifestBuffer)
     throw new InvalidInputError("Snapshot manifest not found");
   const manifest = JSON.parse(manifestBuffer.toString("utf8")) as Manifest;
-  if (![1, 2].includes(manifest.format_version))
+  if (![1, 2, 3].includes(manifest.format_version))
     throw new InvalidInputError("Unsupported snapshot format");
   const records = Object.fromEntries(
     Object.keys(manifest.tables).map((table) => [table, [] as Row[]]),
@@ -540,6 +545,47 @@ function upgradeRecords(records: Record<string, Row[]>): Record<string, Row[]> {
       created_at: member.created_at ?? "",
     })),
   };
+}
+
+const revisionTables = new Set([
+  "workspace",
+  "actors",
+  "teams",
+  "issue_statuses",
+  "labels",
+  "projects",
+  "cycles",
+  "milestones",
+  "issues",
+  "views",
+  "team_resources",
+  "notifications",
+  "app_settings",
+  "recurring_rules",
+  "automations",
+]);
+
+function upgradeRecordsToCurrent(
+  source: Record<string, Row[]>,
+  formatVersion: number,
+): Record<string, Row[]> {
+  const records = formatVersion === 1 ? upgradeRecords(source) : source;
+  const upgraded = Object.fromEntries(
+    Object.entries(records).map(([table, entries]) => [
+      table,
+      entries.map((entry) => ({
+        ...entry,
+        ...(revisionTables.has(table)
+          ? { revision: Number(entry.revision ?? 1) }
+          : {}),
+        ...(table === "workspace"
+          ? { workspace_id: entry.workspace_id ?? randomUUID() }
+          : {}),
+      })),
+    ]),
+  );
+  if (!("work_evidence" in upgraded)) upgraded.work_evidence = [];
+  return upgraded;
 }
 
 function checkFiles(

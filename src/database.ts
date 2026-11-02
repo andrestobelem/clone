@@ -32,17 +32,24 @@ export function openDatabase(
   database.exec("PRAGMA foreign_keys = ON");
   database.exec("PRAGMA journal_mode = WAL");
 
-  if (
-    !options.create &&
-    !options.allowLegacy &&
-    !hasTable(database, "actors")
-  ) {
+  if (!options.create && !options.allowLegacy && schemaVersion(database) < 3) {
     database.close();
     throw new InvalidInputError(
       "Database needs migration. Run clone sync migrate.",
     );
   }
   return database;
+}
+
+export function schemaVersion(database: Database): number {
+  const row = database.prepare("PRAGMA user_version").get() as
+    { user_version?: number } | undefined;
+  if (Number(row?.user_version)) return Number(row?.user_version);
+  return hasTable(database, "actors")
+    ? 2
+    : hasTable(database, "workspace")
+      ? 1
+      : 0;
 }
 
 export function hasTable(database: Database, name: string): boolean {

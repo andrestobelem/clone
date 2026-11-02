@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { run, scalar, sql, type Database } from "./database.js";
 import { issueStatuses, schema } from "./schema.js";
 import type { JsonValue } from "./types.js";
@@ -18,7 +20,8 @@ export function seedEmpty(database: Database): void {
   const stamp = now();
   run(
     database,
-    "INSERT INTO workspace(id,name,icon,created_at) VALUES(1,?,?,?)",
+    "INSERT INTO workspace(id,workspace_id,name,icon,created_at) VALUES(1,?,?,?,?)",
+    randomUUID(),
     "My Workspace",
     "M",
     stamp,
@@ -52,7 +55,8 @@ export function seedDemo(database: Database): void {
   const stamp = now();
   run(
     database,
-    "INSERT INTO workspace(id,name,icon,created_at) VALUES(1,?,?,?)",
+    "INSERT INTO workspace(id,workspace_id,name,icon,created_at) VALUES(1,?,?,?,?)",
+    randomUUID(),
     "Acme Studio",
     "A",
     stamp,
