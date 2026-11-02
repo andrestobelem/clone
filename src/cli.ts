@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { actions, fieldTypes, listFilters, resources } from "./commands.js";
 import { openDatabase } from "./database.js";
 import {
   CloneError,
@@ -37,137 +38,6 @@ const packageVersion = String(
     ) as { version: unknown }
   ).version,
 );
-
-const resources: Record<string, string> = {
-  actors: "actors",
-  agents: "actors",
-  issues: "issues",
-  projects: "projects",
-  teams: "teams",
-  members: "members",
-  statuses: "issue_statuses",
-  labels: "labels",
-  cycles: "cycles",
-  views: "views",
-  inbox: "notifications",
-  automations: "automations",
-  recurring: "recurring_rules",
-  settings: "app_settings",
-  preferences: "app_settings",
-  workspace: "workspace",
-};
-
-const actions: Record<string, Record<string, [string, string]>> = {
-  agents: {
-    create: ["POST", "/api/agents"],
-    update: ["PATCH", "/api/agents/{id}"],
-    deactivate: ["POST", "/api/agents/{id}/deactivate"],
-    restore: ["POST", "/api/agents/{id}/restore"],
-  },
-  issues: {
-    create: ["POST", "/api/issues"],
-    update: ["PATCH", "/api/issues/{id}"],
-    archive: ["DELETE", "/api/issues/{id}"],
-    restore: ["POST", "/api/issues/{id}/restore"],
-    comment: ["POST", "/api/issues/{id}/comments"],
-    attach: ["POST", "/api/issues/{id}/attachments"],
-    relate: ["POST", "/api/issues/{id}/relations"],
-    import: ["POST", "/api/import"],
-  },
-  projects: {
-    create: ["POST", "/api/projects"],
-    update: ["PATCH", "/api/projects/{id}"],
-    archive: ["DELETE", "/api/projects/{id}"],
-    restore: ["POST", "/api/projects/{id}/restore"],
-    milestone: ["POST", "/api/projects/{id}/milestones"],
-    "post-update": ["POST", "/api/projects/{id}/updates"],
-    depend: ["POST", "/api/projects/{id}/dependencies"],
-  },
-  teams: {
-    create: ["POST", "/api/teams"],
-    update: ["PATCH", "/api/teams/{id}"],
-    "add-resource": ["POST", "/api/teams/{id}/resources"],
-    "remove-resource": ["DELETE", "/api/teams/{id}/resources/{resource_id}"],
-  },
-  statuses: { create: ["POST", "/api/statuses"] },
-  labels: { create: ["POST", "/api/labels"] },
-  cycles: { create: ["POST", "/api/cycles"] },
-  views: {
-    create: ["POST", "/api/views"],
-    update: ["PATCH", "/api/views/{id}"],
-    delete: ["DELETE", "/api/views/{id}"],
-  },
-  inbox: {
-    read: ["POST", "/api/notifications/{id}/read"],
-    unread: ["POST", "/api/notifications/{id}/unread"],
-    archive: ["POST", "/api/notifications/{id}/archive"],
-    "read-all": ["POST", "/api/notifications/read-all"],
-    "read-selected": ["POST", "/api/notifications/read-selected"],
-    "archive-selected": ["POST", "/api/notifications/archive-selected"],
-  },
-  preferences: { update: ["PATCH", "/api/preferences"] },
-  settings: { update: ["PATCH", "/api/settings"] },
-  workspace: { update: ["PATCH", "/api/settings"] },
-  automations: { create: ["POST", "/api/automations"] },
-  recurring: { create: ["POST", "/api/recurring"] },
-};
-
-const textFields = [
-  "title",
-  "name",
-  "description",
-  "summary",
-  "status",
-  "body",
-  "health",
-  "key",
-  "icon",
-  "color",
-  "category",
-  "timezone",
-  "estimateType",
-  "dueDate",
-  "startDate",
-  "targetDate",
-  "startsAt",
-  "endsAt",
-  "cadence",
-  "nextRun",
-  "externalUrl",
-  "scope",
-  "entity",
-  "section",
-  "url",
-  "type",
-  "relatedIssueId",
-];
-const integerFields = [
-  "teamId",
-  "projectId",
-  "cycleId",
-  "milestoneId",
-  "assigneeId",
-  "leadId",
-  "parentId",
-  "dependsOnId",
-];
-const jsonFields = [
-  "labelIds",
-  "teamIds",
-  "memberIds",
-  "subscriberIds",
-  "ids",
-  "filters",
-  "display",
-  "trigger",
-  "condition",
-  "action",
-  "value",
-  "dependencies",
-  "milestones",
-  "recurringRule",
-  "isFavorite",
-];
 
 interface Parsed {
   readonly command: string;
@@ -274,7 +144,7 @@ async function execute(
   const payload = readPayload(parsed);
   const actor = numberOption(parsed.options.actor, 1);
   payload.actorId = actor;
-  let route = action[1]
+  let route = action.route
     .replace("{id}", parsed.positionals[0] ?? "")
     .replace("{resource_id}", parsed.positionals[1] ?? "");
   if (parsed.command === "workspace") {
@@ -291,14 +161,20 @@ async function execute(
     return read(paths, (database) => {
       database.exec("BEGIN IMMEDIATE");
       try {
-        return dispatchMutation(database, action[0], route, payload, paths);
+        return dispatchMutation(database, action.method, route, payload, paths);
       } finally {
         database.exec("ROLLBACK");
       }
     });
   }
   return mutate(paths, (database) => {
-    const result = dispatchMutation(database, action[0], route, payload, paths);
+    const result = dispatchMutation(
+      database,
+      action.method,
+      route,
+      payload,
+      paths,
+    );
     if (Number(result._status ?? 200) >= 400)
       throw new InvalidInputError(String(result.error ?? "Command failed"));
     delete result._status;
@@ -627,20 +503,16 @@ function readPayload(parsed: Parsed): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new InvalidInputError("--data must contain a JSON object");
   const result = { ...(value as JsonObject) };
-  for (const field of textFields)
-    if (parsed.options[field] !== undefined)
-      result[field] = String(parsed.options[field]);
-  for (const field of integerFields)
-    if (parsed.options[field] !== undefined)
-      result[field] = numberOption(parsed.options[field]);
-  for (const field of jsonFields)
-    if (parsed.options[field] !== undefined)
+  const definition = actions[parsed.command]?.[parsed.verb ?? ""];
+  for (const field of definition?.fields ?? []) {
+    if (parsed.options[field] === undefined) continue;
+    const type = fieldTypes[field];
+    if (type === "integer") result[field] = numberOption(parsed.options[field]);
+    else if (type === "number") result[field] = Number(parsed.options[field]);
+    else if (type === "json")
       result[field] = JSON.parse(String(parsed.options[field])) as JsonValue;
-  for (const field of ["estimate", "capacity"])
-    if (parsed.options[field] !== undefined)
-      result[field] = Number(parsed.options[field]);
-  if (parsed.options.priority !== undefined)
-    result.priority = String(parsed.options.priority);
+    else result[field] = String(parsed.options[field]);
+  }
   return result;
 }
 function addFiles(payload: JsonObject, files: string[]) {
@@ -770,37 +642,6 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
       argument("output", ["--output"], "string", true),
     ],
   );
-  const mutationArguments = [
-    argument(
-      "data",
-      ["--data"],
-      "string",
-      false,
-      undefined,
-      undefined,
-      "JSON object, @file.json, or - for stdin",
-    ),
-    ...textFields.map((field) =>
-      argument(field, [`--${kebab(field)}`], "string", false),
-    ),
-    ...integerFields.map((field) =>
-      argument(field, [`--${kebab(field)}`], "integer", false),
-    ),
-    ...jsonFields.map((field) =>
-      argument(field, [`--${kebab(field)}`], "json", false),
-    ),
-    argument("estimate", ["--estimate"], "number", false),
-    argument("capacity", ["--capacity"], "number", false),
-    argument(
-      "priority",
-      ["--priority"],
-      "string",
-      false,
-      undefined,
-      undefined,
-      "Priority name or number from 0 to 4",
-    ),
-  ];
   for (const resource of Object.keys(resources)) {
     for (const verb of ["list", "show"]) {
       const extra = [];
@@ -817,19 +658,50 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
             undefined,
             "Include archived and inactive records",
           ),
-          argument("team_id", ["--team-id"], "integer", false),
-          argument("project_id", ["--project-id"], "integer", false),
-          argument("status", ["--status"], "string", false),
+          argument("limit", ["--limit"], "integer", false, 100),
+          argument("cursor", ["--cursor"], "string", false),
+          ...(listFilters[resource] ?? []).map((field) =>
+            argument(
+              field,
+              [`--${kebab(field)}`],
+              fieldTypes[field] ?? "string",
+              false,
+            ),
+          ),
         );
       add([resource, verb], extra);
     }
-    for (const [verb, [, route]] of Object.entries(actions[resource] ?? {})) {
+    for (const [verb, definition] of Object.entries(actions[resource] ?? {})) {
       const extra = [];
+      const route = definition.route;
       if (route.includes("{id}"))
         extra.push(argument("id", [], "string", true));
       if (route.includes("{resource_id}"))
         extra.push(argument("resource_id", [], "integer", true));
-      extra.push(...mutationArguments);
+      extra.push(
+        argument(
+          "data",
+          ["--data"],
+          "string",
+          false,
+          undefined,
+          undefined,
+          "JSON object, @file.json, or - for stdin",
+        ),
+        ...definition.fields.map((field) =>
+          argument(
+            field,
+            [`--${kebab(field)}`],
+            fieldTypes[field] ?? "string",
+            definition.required?.includes(field) ?? false,
+            undefined,
+            undefined,
+            field === "priority"
+              ? "Priority name or number from 0 to 4"
+              : undefined,
+          ),
+        ),
+      );
       if (verb === "attach")
         extra.push({
           ...argument("file", ["--file"], "string", false, []),
@@ -851,7 +723,7 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
       pathPrefix,
       `Unknown command path: ${pathPrefix.join(" ")}`,
     );
-  return { formatVersion: 1, commands: selected };
+  return { formatVersion: 2, commands: selected };
 }
 function argument(
   name: string,

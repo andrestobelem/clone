@@ -156,7 +156,7 @@ describe("CLI contract", () => {
     const issueCreate = catalog.commands.find(
       (command) => command.path.join(" ") === "issues create",
     );
-    expect(catalog.formatVersion).toBe(1);
+    expect(catalog.formatVersion).toBe(2);
     expect(issueCreate?.arguments.map((argument) => argument.name)).toEqual(
       expect.arrayContaining([
         "data",
@@ -180,7 +180,7 @@ describe("CLI contract", () => {
       formatVersion: number;
       commands: Array<{ path: string[] }>;
     };
-    expect(groupCatalog.formatVersion).toBe(1);
+    expect(groupCatalog.formatVersion).toBe(2);
     expect(groupCatalog.commands.length).toBeGreaterThan(1);
     expect(
       groupCatalog.commands.every((command) => command.path[0] === "issues"),
@@ -189,9 +189,23 @@ describe("CLI contract", () => {
     const command = runTypeScript(["describe", "issues", "comment", "--json"]);
     expect(command.status, command.stderr).toBe(0);
     expect(JSON.parse(command.stdout)).toMatchObject({
-      formatVersion: 1,
+      formatVersion: 2,
       commands: [{ path: ["issues", "comment"] }],
     });
+  });
+
+  it("describes only fields accepted by one mutation", () => {
+    const result = runTypeScript(["describe", "issues", "update", "--json"]);
+    expect(result.status, result.stderr).toBe(0);
+    const catalog = JSON.parse(result.stdout) as {
+      commands: Array<{ arguments: Array<{ name: string }> }>;
+    };
+    const names = catalog.commands[0]!.arguments.map(({ name }) => name);
+    expect(names).toContain("ifRevision");
+    expect(names).toContain("assigneeId");
+    expect(names).not.toContain("timezone");
+    expect(names).not.toContain("capacity");
+    expect(names).not.toContain("health");
   });
 
   it.each([false, true])(
@@ -237,7 +251,7 @@ describe("CLI contract", () => {
             arguments: Array<{ name: string; default?: unknown }>;
           }>;
         };
-        expect(catalog.formatVersion).toBe(1);
+        expect(catalog.formatVersion).toBe(2);
         if (filtered) expect(catalog.commands).toHaveLength(1);
         else expect(catalog.commands.length).toBeGreaterThan(1);
         for (const command of catalog.commands) {
