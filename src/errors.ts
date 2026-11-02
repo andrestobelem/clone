@@ -31,6 +31,17 @@ export class RelationshipConflictError extends CloneError {
   }
 }
 
+export class RecordConflictError extends CloneError {
+  constructor(expectedRevision: number, currentRevision: number) {
+    super("The record changed after it was read", "record_conflict", 3, {
+      expectedRevision,
+      currentRevision,
+      recovery: "read_then_retry",
+    });
+    this.name = "RecordConflictError";
+  }
+}
+
 export class StorageError extends CloneError {
   constructor(message: string) {
     super(message, "storage_error", 4);

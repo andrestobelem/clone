@@ -12,6 +12,7 @@ import { mutateIssue } from "./issues.js";
 import { mutateProject } from "./projects.js";
 import { mutateTeam } from "./teams.js";
 import { now } from "./time.js";
+import { InvalidInputError, RecordConflictError } from "./errors.js";
 import type { JsonObject, MutationResult, StoragePaths } from "./types.js";
 import { mutationPayload } from "./validation.js";
 import {
@@ -35,6 +36,7 @@ export function dispatchMutation(
   const actor = requireActor(database, data.actorId ?? 1);
   validateActorFields(database, data, method, route);
   const stamp = now();
+  advanceRevision(database, method, route, data);
   return (
     mutateAgent(database, method, route, data, stamp) ??
     mutateTeam(database, method, route, data, stamp, actor) ??
@@ -51,6 +53,80 @@ export function dispatchMutation(
     ) ??
     mutateGeneral(database, method, route, data, stamp, actor)
   );
+}
+
+interface RevisionTarget {
+  readonly table: string;
+  readonly key: string;
+  readonly value: string | number;
+}
+
+function advanceRevision(
+  database: Database,
+  method: string,
+  route: string,
+  data: JsonObject,
+): void {
+  const target = revisionTarget(method, route, data);
+  if (!target) return;
+  if (!Number.isInteger(data.ifRevision) || Number(data.ifRevision) < 1)
+    throw new InvalidInputError("ifRevision must be a positive integer");
+  const record = one(
+    database,
+    `SELECT revision FROM ${target.table} WHERE ${target.key}=?`,
+    target.value,
+  );
+  if (!record) throw new InvalidInputError("Record not found");
+  const currentRevision = Number(record.revision);
+  const expectedRevision = Number(data.ifRevision);
+  if (currentRevision !== expectedRevision)
+    throw new RecordConflictError(expectedRevision, currentRevision);
+  run(
+    database,
+    `UPDATE ${target.table} SET revision=revision+1 WHERE ${target.key}=?`,
+    target.value,
+  );
+}
+
+function revisionTarget(
+  method: string,
+  route: string,
+  data: JsonObject,
+): RevisionTarget | null {
+  const agent = route.match(
+    /^\/api\/agents\/(\d+)(?:\/(?:deactivate|restore))?$/,
+  );
+  if (agent && ["PATCH", "POST"].includes(method))
+    return { table: "actors", key: "id", value: Number(agent[1]) };
+  const issue = route.match(/^\/api\/issues\/([^/]+)(?:\/(restore))?$/);
+  if (issue && ["PATCH", "DELETE", "POST"].includes(method))
+    return { table: "issues", key: "identifier", value: issue[1]! };
+  const project = route.match(/^\/api\/projects\/(\d+)(?:\/(restore))?$/);
+  if (project && ["PATCH", "DELETE", "POST"].includes(method))
+    return { table: "projects", key: "id", value: Number(project[1]) };
+  const team = route.match(/^\/api\/teams\/(\d+)$/);
+  if (team && method === "PATCH")
+    return { table: "teams", key: "id", value: Number(team[1]) };
+  const resource = route.match(/^\/api\/teams\/\d+\/resources\/(\d+)$/);
+  if (resource && method === "DELETE")
+    return { table: "team_resources", key: "id", value: Number(resource[1]) };
+  const view = route.match(/^\/api\/views\/(\d+)$/);
+  if (view && ["PATCH", "DELETE"].includes(method))
+    return { table: "views", key: "id", value: Number(view[1]) };
+  const notification = route.match(
+    /^\/api\/notifications\/(\d+)\/(?:read|unread|archive)$/,
+  );
+  if (notification && method === "POST")
+    return {
+      table: "notifications",
+      key: "id",
+      value: Number(notification[1]),
+    };
+  if (route === "/api/preferences" && method === "PATCH")
+    return { table: "app_settings", key: "key", value: "preferences" };
+  if (route === "/api/settings" && method === "PATCH")
+    return { table: "app_settings", key: "key", value: String(data.key) };
+  return null;
 }
 
 function mutateGeneral(

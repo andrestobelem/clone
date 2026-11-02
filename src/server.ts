@@ -122,7 +122,8 @@ async function handle(
     const body: Record<string, unknown> = {
       error: error instanceof Error ? error.message : String(error),
     };
-    if (error instanceof CloneError) Object.assign(body, error.details);
+    if (error instanceof CloneError)
+      Object.assign(body, { code: error.code, ...error.details });
     else
       ((body.error = "Internal error"),
         (body.detail = error instanceof Error ? error.message : String(error)));

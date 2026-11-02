@@ -51,11 +51,12 @@ export function bootstrap(
     database,
     "SELECT c.*,t.name AS team_name,t.key FROM cycles c JOIN teams t ON t.id=c.team_id ORDER BY c.starts_at DESC",
   ).map((cycle) => cycleRecord(database, cycle));
+  const settingRows = rows(database, "SELECT * FROM app_settings");
   const settings = Object.fromEntries(
-    rows(database, "SELECT * FROM app_settings").map((row) => [
-      String(row.key),
-      parseJson(row.value_json, {}),
-    ]),
+    settingRows.map((row) => [String(row.key), parseJson(row.value_json, {})]),
+  );
+  const settingRevisions = Object.fromEntries(
+    settingRows.map((row) => [String(row.key), Number(row.revision)]),
   );
   return {
     workspace,
@@ -87,10 +88,11 @@ export function bootstrap(
       ).map((row) => issueRow(database, Number(row.id))),
       projects: rows(
         database,
-        "SELECT id,name,summary,status,updated_at FROM projects WHERE archived=1 ORDER BY updated_at DESC",
+        "SELECT id,name,summary,status,updated_at,revision FROM projects WHERE archived=1 ORDER BY updated_at DESC",
       ),
     },
     settings,
+    settingRevisions,
     currentMemberId: 1,
     currentActorId: currentActor,
     actors: actorRecords(database, null, true),

@@ -36,7 +36,9 @@ describe("workspace actions", () => {
       key: "worker",
       name: "Worker",
     }) as { agent: { id: number } };
-    action(paths, "POST", `/api/agents/${created.agent.id}/deactivate`);
+    action(paths, "POST", `/api/agents/${created.agent.id}/deactivate`, {
+      ifRevision: 1,
+    });
     expect(() =>
       action(paths, "POST", "/api/issues", {
         actorId: created.agent.id,
@@ -45,7 +47,9 @@ describe("workspace actions", () => {
       }),
     ).toThrow("inactive");
     expect(
-      action(paths, "POST", `/api/agents/${created.agent.id}/restore`),
+      action(paths, "POST", `/api/agents/${created.agent.id}/restore`, {
+        ifRevision: 2,
+      }),
     ).toMatchObject({ agent: { active: 1 } });
   });
 
@@ -110,18 +114,49 @@ describe("workspace actions", () => {
       status: "Done",
       priority: "Low",
       labelIds: [2],
+      ifRevision: 1,
     });
     expect(result).toMatchObject({
-      issue: { title: "Updated title", status: "Done", priority_name: "Low" },
+      issue: {
+        title: "Updated title",
+        status: "Done",
+        priority_name: "Low",
+        revision: 2,
+      },
     });
     expect(
       (result.issue as { activity: unknown[] }).activity.length,
     ).toBeGreaterThan(0);
   });
 
+  it("rejects a stale issue revision without partial changes", () => {
+    const paths = demoWorkspace();
+    action(paths, "PATCH", "/api/issues/PRO-248", {
+      title: "First change",
+      ifRevision: 1,
+    });
+    expect(() =>
+      action(paths, "PATCH", "/api/issues/PRO-248", {
+        title: "Stale change",
+        ifRevision: 1,
+      }),
+    ).toThrow("changed after it was read");
+    expect(
+      read(paths, (database) =>
+        database
+          .prepare(
+            "SELECT title,revision FROM issues WHERE identifier='PRO-248'",
+          )
+          .get(),
+      ),
+    ).toEqual({ title: "First change", revision: 2 });
+  });
+
   it("archives and restores issues", () => {
     const paths = demoWorkspace();
-    expect(action(paths, "DELETE", "/api/issues/PRO-248")).toEqual({
+    expect(
+      action(paths, "DELETE", "/api/issues/PRO-248", { ifRevision: 1 }),
+    ).toEqual({
       ok: true,
     });
     expect(
@@ -131,7 +166,7 @@ describe("workspace actions", () => {
           .get(),
       ),
     ).toEqual({ archived: 1 });
-    action(paths, "POST", "/api/issues/PRO-248/restore");
+    action(paths, "POST", "/api/issues/PRO-248/restore", { ifRevision: 2 });
     expect(
       read(paths, (database) =>
         database
@@ -207,8 +242,11 @@ describe("workspace actions", () => {
     action(paths, "PATCH", `/api/projects/${created.projectId}`, {
       summary: "Updated",
       priority: "High",
+      ifRevision: 1,
     });
-    action(paths, "DELETE", `/api/projects/${created.projectId}`);
+    action(paths, "DELETE", `/api/projects/${created.projectId}`, {
+      ifRevision: 2,
+    });
     expect(
       read(paths, (database) =>
         database
@@ -216,7 +254,9 @@ describe("workspace actions", () => {
           .get(created.projectId),
       ),
     ).toEqual({ summary: "Updated", archived: 1 });
-    action(paths, "POST", `/api/projects/${created.projectId}/restore`);
+    action(paths, "POST", `/api/projects/${created.projectId}/restore`, {
+      ifRevision: 3,
+    });
     expect(
       read(paths, (database) =>
         database
@@ -237,6 +277,7 @@ describe("workspace actions", () => {
     action(paths, "PATCH", `/api/views/${created.viewId}`, {
       name: "My open bugs",
       isFavorite: true,
+      ifRevision: 1,
     });
     expect(
       read(paths, (database) =>
@@ -245,7 +286,9 @@ describe("workspace actions", () => {
           .get(created.viewId),
       ),
     ).toEqual({ name: "My open bugs", is_favorite: 1 });
-    action(paths, "DELETE", `/api/views/${created.viewId}`);
+    action(paths, "DELETE", `/api/views/${created.viewId}`, {
+      ifRevision: 2,
+    });
     expect(
       read(paths, (database) =>
         database.prepare("SELECT id FROM views WHERE id=?").get(created.viewId),
