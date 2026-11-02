@@ -12,7 +12,11 @@ export type Database = DatabaseSync;
 
 export function openDatabase(
   paths: StoragePaths,
-  options: { readonly create?: boolean; readonly allowLegacy?: boolean } = {},
+  options: {
+    readonly create?: boolean;
+    readonly allowLegacy?: boolean;
+    readonly readOnly?: boolean;
+  } = {},
 ): Database {
   if (!options.create && !fs.existsSync(paths.database)) {
     throw new InvalidInputError(
@@ -25,12 +29,12 @@ export function openDatabase(
 
   const database = new DatabaseSync(paths.database, {
     open: true,
-    readOnly: false,
+    readOnly: options.readOnly ?? false,
     enableForeignKeyConstraints: true,
     timeout: 15_000,
   });
   database.exec("PRAGMA foreign_keys = ON");
-  database.exec("PRAGMA journal_mode = WAL");
+  if (!options.readOnly) database.exec("PRAGMA journal_mode = WAL");
 
   if (!options.create && !options.allowLegacy && schemaVersion(database) < 3) {
     database.close();

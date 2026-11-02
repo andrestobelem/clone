@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { actions, fieldTypes, listFilters, resources } from "./commands.js";
-import { openDatabase } from "./database.js";
+import { openDatabase, schemaVersion } from "./database.js";
 import {
   BatchOperationError,
   CloneError,
@@ -69,6 +69,10 @@ export async function main(argv: string[]): Promise<number> {
     }
     if (parsed.command === "context") {
       writeResult(storageContext(parsed), true);
+      return 0;
+    }
+    if (parsed.command === "doctor") {
+      writeResult(doctor(parsed), true);
       return 0;
     }
     const paths = resolvePaths(parsed);
@@ -489,6 +493,7 @@ function parseArguments(argv: string[]): Parsed {
       "init",
       "batch",
       "context",
+      "doctor",
       "describe",
       "serve",
       "search",
@@ -594,6 +599,7 @@ function canonicalCommandPaths(): string[][] {
     ["init"],
     ["batch"],
     ["context"],
+    ["doctor"],
     ["describe"],
     ["serve"],
     ["search"],
@@ -704,6 +710,77 @@ function storageContext(parsed: Parsed) {
     attachmentsDirectory: paths.attachmentsDirectory,
     backupsDirectory: paths.backupsDirectory,
   };
+}
+
+function doctor(parsed: Parsed): Record<string, unknown> {
+  const paths = resolvePaths(parsed);
+  const actorSelection = resolveActor(parsed, {}, false);
+  if (!fs.existsSync(paths.database))
+    return {
+      formatVersion: 1,
+      healthy: false,
+      cliVersion: packageVersion,
+      actorSelection,
+      storage: storageContext(parsed),
+      checks: [{ name: "database", status: "missing" }],
+    };
+  const database = openDatabase(paths, { allowLegacy: true, readOnly: true });
+  try {
+    const version = schemaVersion(database);
+    const workspace = database
+      .prepare(
+        version >= 3
+          ? "SELECT workspace_id,name FROM workspace LIMIT 1"
+          : "SELECT NULL AS workspace_id,name FROM workspace LIMIT 1",
+      )
+      .get() as { workspace_id?: string; name?: string } | undefined;
+    const actor = database
+      .prepare("SELECT id,kind,name,active FROM actors WHERE id=?")
+      .get(actorSelection.actorId) as Row | undefined;
+    const synchronization = syncStatus(paths);
+    let snapshotFormatVersion: number | null = null;
+    if (fs.existsSync(path.join(paths.snapshotDirectory, "manifest.json")))
+      snapshotFormatVersion = Number(validateSnapshot(paths).formatVersion);
+    const migrationRequired = version < 3;
+    const actorReady = Boolean(actor && Number(actor.active));
+    const clean =
+      !synchronization.files_changed && !synchronization.database_changed;
+    return {
+      formatVersion: 1,
+      healthy: !migrationRequired && actorReady && clean,
+      cliVersion: packageVersion,
+      schemaVersion: version,
+      snapshotFormatVersion,
+      workspace: workspace
+        ? { id: workspace.workspace_id ?? null, name: workspace.name }
+        : null,
+      actorSelection: {
+        ...actorSelection,
+        exists: Boolean(actor),
+        active: actorReady,
+      },
+      synchronization,
+      compatibility: {
+        supported: version <= 3,
+        migrationRequired,
+        minimumCliVersion: version >= 3 ? "0.3.0" : "0.2.0",
+      },
+      checks: [
+        { name: "database", status: "ok" },
+        {
+          name: "schema",
+          status: migrationRequired ? "migration_required" : "ok",
+        },
+        {
+          name: "actor",
+          status: actorReady ? "ok" : actor ? "inactive" : "missing",
+        },
+        { name: "synchronization", status: clean ? "ok" : "conflict" },
+      ],
+    };
+  } finally {
+    database.close();
+  }
 }
 
 function resolveActor(
@@ -872,6 +949,7 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
     ],
   );
   add(["context"]);
+  add(["doctor"]);
   add(["serve"]);
   add(
     ["search"],
@@ -1015,7 +1093,7 @@ function argument(
 }
 function printHelp() {
   console.log(
-    `Clone ${packageVersion}\n\nUsage:\n  clone [--local | --data-dir PATH | --db PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH | --db PATH] <CLI command> [options]\n  clone batch --actor ID --data @operations.json --json\n  clone context [--json]\n  clone describe [COMMAND...] [--json]`,
+    `Clone ${packageVersion}\n\nUsage:\n  clone [--local | --data-dir PATH | --db PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH | --db PATH] <CLI command> [options]\n  clone batch --actor ID --data @operations.json --json\n  clone context [--json]\n  clone doctor [--json]\n  clone describe [COMMAND...] [--json]`,
   );
 }
 function writeResult(value: unknown, json: boolean) {

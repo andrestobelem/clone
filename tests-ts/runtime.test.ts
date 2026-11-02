@@ -391,6 +391,56 @@ describe("CLI contract", () => {
     });
   });
 
+  it("diagnoses missing and healthy workspaces without changing them", () => {
+    const root = temporaryDirectory();
+    const missingDatabase = path.join(root, "missing.sqlite3");
+    const missing = runTypeScript([
+      "--db",
+      missingDatabase,
+      "doctor",
+      "--json",
+    ]);
+    expect(missing.status, missing.stderr).toBe(0);
+    expect(JSON.parse(missing.stdout)).toMatchObject({
+      healthy: false,
+      checks: [{ name: "database", status: "missing" }],
+    });
+    expect(fs.existsSync(missingDatabase)).toBe(false);
+
+    const database = path.join(root, "workspace.sqlite3");
+    const snapshot = path.join(root, "snapshot");
+    expect(
+      runTypeScript([
+        "--db",
+        database,
+        "--sync-dir",
+        snapshot,
+        "init",
+        "--demo",
+        "--json",
+      ]).status,
+    ).toBe(0);
+    const healthy = runTypeScript([
+      "--db",
+      database,
+      "--sync-dir",
+      snapshot,
+      "--actor",
+      "1",
+      "doctor",
+      "--json",
+    ]);
+    expect(healthy.status, healthy.stderr).toBe(0);
+    expect(JSON.parse(healthy.stdout)).toMatchObject({
+      healthy: true,
+      schemaVersion: 3,
+      snapshotFormatVersion: 3,
+      workspace: { id: expect.any(String), name: "Acme Studio" },
+      actorSelection: { actorId: 1, source: "flag", active: true },
+      compatibility: { supported: true, migrationRequired: false },
+    });
+  });
+
   it("warns when a mutation uses the temporary actor fallback", () => {
     const root = temporaryDirectory();
     const database = path.join(root, "workspace.sqlite3");

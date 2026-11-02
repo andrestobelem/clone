@@ -309,7 +309,7 @@ export function syncStatus(paths: StoragePaths): Record<string, unknown> {
   let databaseFilesValue: Record<string, Buffer> = {};
   let migrationRequired = false;
   if (databaseExists) {
-    const database = openDatabase(paths, { allowLegacy: true });
+    const database = openDatabase(paths, { allowLegacy: true, readOnly: true });
     try {
       migrationRequired = schemaVersion(database) < 3;
       databaseFilesValue = databaseFiles(paths, database);
