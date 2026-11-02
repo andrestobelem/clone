@@ -10,6 +10,7 @@ import {
   StorageError,
 } from "./errors.js";
 import { defaultDataDirectory, storagePaths } from "./paths.js";
+import { priorities } from "./schema.js";
 import { startServer } from "./server.js";
 import {
   exportSnapshot,
@@ -200,42 +201,10 @@ function readResource(
 ): unknown {
   return read(paths, (database) => {
     const table = resources[parsed.command]!;
-    let entries = database.prepare(`SELECT * FROM "${table}"`).all() as Row[];
     if (parsed.verb === "list") {
-      if (parsed.command === "agents")
-        entries = entries.filter((row) => row.kind === "agent");
-      if (!parsed.options.all)
-        entries = entries.filter(
-          (row) => !Number(row.archived ?? 0) && Number(row.active ?? 1),
-        );
-      const teamId = optionalNumber(parsed.options.teamId);
-      if (teamId !== null) {
-        if (["actors", "agents"].includes(parsed.command)) {
-          const ids = new Set(
-            (
-              database
-                .prepare("SELECT member_id FROM team_members WHERE team_id=?")
-                .all(teamId) as Row[]
-            ).map((r) => Number(r.member_id)),
-          );
-          entries = entries.filter((r) => ids.has(Number(r.id)));
-        } else entries = entries.filter((r) => Number(r.team_id) === teamId);
-      }
-      const status = parsed.options.status;
-      if (status) {
-        if (parsed.command === "issues") {
-          const ids = new Set(
-            (
-              database
-                .prepare("SELECT id FROM issue_statuses WHERE name=?")
-                .all(String(status)) as Row[]
-            ).map((r) => Number(r.id)),
-          );
-          entries = entries.filter((r) => ids.has(Number(r.status_id)));
-        } else entries = entries.filter((r) => r.status === status);
-      }
-      return entries;
+      return listResources(database, parsed, table);
     }
+    const entries = database.prepare(`SELECT * FROM "${table}"`).all() as Row[];
     const identifier =
       parsed.positionals[0] ??
       (parsed.command === "preferences" ? "preferences" : "1");
@@ -257,6 +226,127 @@ function readResource(
     if (table === "app_settings") return JSON.parse(String(item.value_json));
     return item;
   });
+}
+
+function listResources(
+  database: ReturnType<typeof openDatabase>,
+  parsed: Parsed,
+  table: string,
+): { items: Row[]; page: { nextCursor: string | null } } {
+  const columns = new Set(
+    (
+      database.prepare(`PRAGMA table_info("${table}")`).all() as Array<{
+        name: string;
+      }>
+    ).map(({ name }) => name),
+  );
+  const conditions: string[] = [];
+  const values: Array<string | number> = [];
+  if (parsed.command === "agents") conditions.push("kind='agent'");
+  if (!parsed.options.all) {
+    if (columns.has("archived")) conditions.push("archived=0");
+    if (columns.has("active")) conditions.push("active=1");
+  }
+  const directFilters: Array<[string, string]> = [
+    ["teamId", "team_id"],
+    ["projectId", "project_id"],
+    ["assigneeId", "assignee_id"],
+    ["parentId", "parent_id"],
+  ];
+  for (const [option, column] of directFilters) {
+    if (parsed.options[option] === undefined || !columns.has(column)) continue;
+    conditions.push(`${column}=?`);
+    values.push(numberOption(parsed.options[option]));
+  }
+  if (
+    parsed.options.teamId !== undefined &&
+    ["actors", "agents"].includes(parsed.command)
+  ) {
+    conditions.push(
+      "id IN (SELECT member_id FROM team_members WHERE team_id=?)",
+    );
+    values.push(numberOption(parsed.options.teamId));
+  }
+  if (parsed.options.status !== undefined) {
+    if (parsed.command === "issues") {
+      conditions.push(
+        "status_id IN (SELECT id FROM issue_statuses WHERE name=?)",
+      );
+    } else if (columns.has("status")) conditions.push("status=?");
+    values.push(String(parsed.options.status));
+  }
+  if (parsed.options.priority !== undefined && columns.has("priority")) {
+    const raw = String(parsed.options.priority);
+    const numeric = /^\d+$/.test(raw)
+      ? Number(raw)
+      : priorities.indexOf(raw as never);
+    if (!Number.isInteger(numeric) || numeric < 0 || numeric > 4)
+      throw new InvalidInputError("Unknown priority");
+    conditions.push("priority=?");
+    values.push(numeric);
+  }
+  if (parsed.options.updatedSince !== undefined && columns.has("updated_at")) {
+    const updatedSince = String(parsed.options.updatedSince);
+    if (!Number.isFinite(Date.parse(updatedSince)))
+      throw new InvalidInputError("--updated-since must be an ISO timestamp");
+    conditions.push("updated_at>=?");
+    values.push(updatedSince);
+  }
+  const sortColumn = columns.has("updated_at")
+    ? "updated_at"
+    : columns.has("created_at")
+      ? "created_at"
+      : "id";
+  const cursor = decodeListCursor(parsed.options.cursor);
+  if (cursor) {
+    conditions.push(
+      sortColumn === "id"
+        ? "id<?"
+        : `(${sortColumn}<? OR (${sortColumn}=? AND id<?))`,
+    );
+    if (sortColumn === "id") values.push(cursor.id);
+    else values.push(cursor.sort, cursor.sort, cursor.id);
+  }
+  const limit = numberOption(parsed.options.limit, 100);
+  if (limit < 1 || limit > 500)
+    throw new InvalidInputError("--limit must be between 1 and 500");
+  const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
+  const order = sortColumn === "id" ? "id DESC" : `${sortColumn} DESC,id DESC`;
+  const entries = database
+    .prepare(`SELECT * FROM "${table}"${where} ORDER BY ${order} LIMIT ?`)
+    .all(...values, limit + 1) as Row[];
+  const items = entries.slice(0, limit);
+  const last = items.at(-1);
+  return {
+    items,
+    page: {
+      nextCursor:
+        entries.length > limit && last
+          ? Buffer.from(
+              JSON.stringify({ sort: last[sortColumn], id: Number(last.id) }),
+            ).toString("base64url")
+          : null,
+    },
+  };
+}
+
+function decodeListCursor(
+  value: string | boolean | string[] | undefined,
+): { sort: string | number; id: number } | null {
+  if (value === undefined) return null;
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(String(value), "base64url").toString("utf8"),
+    ) as { sort?: unknown; id?: unknown };
+    if (
+      !["string", "number"].includes(typeof parsed.sort) ||
+      !Number.isInteger(parsed.id)
+    )
+      throw new Error("invalid");
+    return { sort: parsed.sort as string | number, id: Number(parsed.id) };
+  } catch {
+    throw new InvalidInputError("Invalid list cursor");
+  }
 }
 
 function attachmentGet(

@@ -464,6 +464,52 @@ describe("CLI contract", () => {
     expect(help.stdout).toContain(`Clone ${metadata.version}`);
   });
 
+  it("paginates and filters issue lists in stable order", () => {
+    const root = temporaryDirectory();
+    const database = path.join(root, "workspace.sqlite3");
+    const snapshot = path.join(root, "snapshot");
+    const storage = ["--db", database, "--sync-dir", snapshot];
+    expect(runTypeScript([...storage, "init", "--demo", "--json"]).status).toBe(
+      0,
+    );
+    const first = runTypeScript([
+      ...storage,
+      "issues",
+      "list",
+      "--limit",
+      "2",
+      "--project-id",
+      "1",
+      "--json",
+    ]);
+    expect(first.status, first.stderr).toBe(0);
+    const firstPage = JSON.parse(first.stdout) as {
+      items: Array<{ id: number; project_id: number }>;
+      page: { nextCursor: string };
+    };
+    expect(firstPage.items).toHaveLength(2);
+    expect(firstPage.items.every((item) => item.project_id === 1)).toBe(true);
+    const second = runTypeScript([
+      ...storage,
+      "issues",
+      "list",
+      "--limit",
+      "2",
+      "--project-id",
+      "1",
+      "--cursor",
+      firstPage.page.nextCursor,
+      "--json",
+    ]);
+    expect(second.status, second.stderr).toBe(0);
+    const secondPage = JSON.parse(second.stdout) as {
+      items: Array<{ id: number }>;
+    };
+    expect(secondPage.items.map(({ id }) => id)).not.toEqual(
+      firstPage.items.map(({ id }) => id),
+    );
+  });
+
   it("creates an agent through the command entry point", () => {
     const directory = temporaryDirectory();
     const database = path.join(directory, "workspace.sqlite3");
