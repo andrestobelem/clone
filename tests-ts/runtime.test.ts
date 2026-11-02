@@ -560,6 +560,31 @@ describe("CLI contract", () => {
     );
   });
 
+  it("lists resources that use a key instead of an id", () => {
+    const root = temporaryDirectory();
+    const database = path.join(root, "workspace.sqlite3");
+    const snapshot = path.join(root, "snapshot");
+    const storage = ["--db", database, "--sync-dir", snapshot];
+    expect(runTypeScript([...storage, "init", "--demo", "--json"]).status).toBe(
+      0,
+    );
+    const result = runTypeScript([
+      ...storage,
+      "settings",
+      "list",
+      "--limit",
+      "1",
+      "--json",
+    ]);
+    expect(result.status, result.stderr).toBe(0);
+    const page = JSON.parse(result.stdout) as {
+      items: Array<{ key: string }>;
+      page: { nextCursor: string | null };
+    };
+    expect(page.items).toHaveLength(1);
+    expect(typeof page.items[0]?.key).toBe("string");
+  });
+
   it("commits a Batch atomically and reports each result", () => {
     const root = temporaryDirectory();
     const database = path.join(root, "workspace.sqlite3");

@@ -377,22 +377,28 @@ function listResources(
     ? "updated_at"
     : columns.has("created_at")
       ? "created_at"
-      : "id";
+      : columns.has("id")
+        ? "id"
+        : "key";
+  const stableColumn = columns.has("id") ? "id" : "key";
   const cursor = decodeListCursor(parsed.options.cursor);
   if (cursor) {
     conditions.push(
-      sortColumn === "id"
-        ? "id<?"
-        : `(${sortColumn}<? OR (${sortColumn}=? AND id<?))`,
+      sortColumn === stableColumn
+        ? `${stableColumn}<?`
+        : `(${sortColumn}<? OR (${sortColumn}=? AND ${stableColumn}<?))`,
     );
-    if (sortColumn === "id") values.push(cursor.id);
-    else values.push(cursor.sort, cursor.sort, cursor.id);
+    if (sortColumn === stableColumn) values.push(cursor.key);
+    else values.push(cursor.sort, cursor.sort, cursor.key);
   }
   const limit = numberOption(parsed.options.limit, 100);
   if (limit < 1 || limit > 500)
     throw new InvalidInputError("--limit must be between 1 and 500");
   const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
-  const order = sortColumn === "id" ? "id DESC" : `${sortColumn} DESC,id DESC`;
+  const order =
+    sortColumn === stableColumn
+      ? `${stableColumn} DESC`
+      : `${sortColumn} DESC,${stableColumn} DESC`;
   const entries = database
     .prepare(`SELECT * FROM "${table}"${where} ORDER BY ${order} LIMIT ?`)
     .all(...values, limit + 1) as Row[];
@@ -404,7 +410,10 @@ function listResources(
       nextCursor:
         entries.length > limit && last
           ? Buffer.from(
-              JSON.stringify({ sort: last[sortColumn], id: Number(last.id) }),
+              JSON.stringify({
+                sort: last[sortColumn],
+                key: last[stableColumn],
+              }),
             ).toString("base64url")
           : null,
     },
@@ -413,18 +422,21 @@ function listResources(
 
 function decodeListCursor(
   value: string | boolean | string[] | undefined,
-): { sort: string | number; id: number } | null {
+): { sort: string | number; key: string | number } | null {
   if (value === undefined) return null;
   try {
     const parsed = JSON.parse(
       Buffer.from(String(value), "base64url").toString("utf8"),
-    ) as { sort?: unknown; id?: unknown };
+    ) as { sort?: unknown; key?: unknown };
     if (
       !["string", "number"].includes(typeof parsed.sort) ||
-      !Number.isInteger(parsed.id)
+      !["string", "number"].includes(typeof parsed.key)
     )
       throw new Error("invalid");
-    return { sort: parsed.sort as string | number, id: Number(parsed.id) };
+    return {
+      sort: parsed.sort as string | number,
+      key: parsed.key as string | number,
+    };
   } catch {
     throw new InvalidInputError("Invalid list cursor");
   }
