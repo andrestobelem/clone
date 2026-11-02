@@ -190,6 +190,29 @@ describe("workspace actions", () => {
     });
   });
 
+  it("records attributed Work evidence", () => {
+    const paths = demoWorkspace();
+    const result = action(paths, "POST", "/api/issues/PRO-248/evidence", {
+      actorId: 1,
+      kind: "test",
+      reference: "npm run check",
+      result: "pass",
+      summary: "All checks passed.",
+    });
+    expect(result).toMatchObject({
+      issue: {
+        evidence: [
+          {
+            kind: "test",
+            reference: "npm run check",
+            result: "pass",
+            actor_id: 1,
+          },
+        ],
+      },
+    });
+  });
+
   it("stores attachment bytes and metadata", () => {
     const paths = demoWorkspace();
     const data = Buffer.from("attachment body").toString("base64");

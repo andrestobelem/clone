@@ -241,7 +241,7 @@ export function mutateIssue(
     return { ok: true };
   }
   const action = route.match(
-    /^\/api\/issues\/([^/]+)\/(restore|comments|attachments|relations)$/,
+    /^\/api\/issues\/([^/]+)\/(restore|comments|evidence|attachments|relations)$/,
   );
   if (!action) return null;
   const issue = one(
@@ -273,6 +273,32 @@ export function mutateIssue(
     );
     event(database, "issue", issueId, actor, "commented", {
       body: body.slice(0, 120),
+    });
+    return { issue: issueRow(database, issueId) as JsonValue, _status: 201 };
+  }
+  if (action[2] === "evidence" && method === "POST") {
+    const kind = String(data.kind ?? "");
+    if (!["commit", "test", "artifact"].includes(kind))
+      fail("Unknown evidence kind");
+    const reference = text(data.reference, "Evidence reference is required");
+    const result = data.result == null ? null : String(data.result);
+    if (result !== null && !["pass", "fail", "not_applicable"].includes(result))
+      fail("Unknown evidence result");
+    run(
+      database,
+      "INSERT INTO work_evidence(issue_id,actor_id,kind,reference,result,summary,created_at) VALUES(?,?,?,?,?,?,?)",
+      issueId,
+      actor,
+      kind,
+      reference,
+      result,
+      sql(data.summary ?? ""),
+      stamp,
+    );
+    event(database, "issue", issueId, actor, "evidence_recorded", {
+      kind,
+      reference,
+      result,
     });
     return { issue: issueRow(database, issueId) as JsonValue, _status: 201 };
   }
@@ -494,6 +520,14 @@ export function issueRow(
   output.comments = rows(
     database,
     "SELECT c.id,c.body,c.created_at,m.id AS author_id,CASE WHEN m.kind='agent' THEN m.name||' (Agent)' ELSE m.name END AS author,m.avatar_color FROM comments c JOIN actors m ON m.id=c.author_id WHERE c.issue_id=? ORDER BY c.id",
+    issueId,
+  );
+  output.evidence = rows(
+    database,
+    `SELECT e.id,e.kind,e.reference,e.result,e.summary,e.created_at,e.actor_id,
+    CASE WHEN a.kind='agent' THEN a.name||' (Agent)' ELSE a.name END AS actor
+    FROM work_evidence e JOIN actors a ON a.id=e.actor_id
+    WHERE e.issue_id=? ORDER BY e.id`,
     issueId,
   );
   output.attachments = rows(
