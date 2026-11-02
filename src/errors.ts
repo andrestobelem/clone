@@ -42,6 +42,22 @@ export class RecordConflictError extends CloneError {
   }
 }
 
+export class BatchOperationError extends CloneError {
+  constructor(operationIndex: number, operationId: string, cause: CloneError) {
+    super(
+      `Batch operation failed: ${cause.message}`,
+      "batch_failed",
+      cause.exitCode,
+      {
+        operationIndex,
+        operationId,
+        cause: { code: cause.code, message: cause.message, ...cause.details },
+      },
+    );
+    this.name = "BatchOperationError";
+  }
+}
+
 export class StorageError extends CloneError {
   constructor(message: string) {
     super(message, "storage_error", 4);

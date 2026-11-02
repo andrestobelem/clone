@@ -510,6 +510,94 @@ describe("CLI contract", () => {
     );
   });
 
+  it("commits a Batch atomically and reports each result", () => {
+    const root = temporaryDirectory();
+    const database = path.join(root, "workspace.sqlite3");
+    const snapshot = path.join(root, "snapshot");
+    const storage = ["--db", database, "--sync-dir", snapshot];
+    expect(runTypeScript([...storage, "init", "--demo", "--json"]).status).toBe(
+      0,
+    );
+    const result = runTypeScript([
+      ...storage,
+      "batch",
+      "--actor",
+      "1",
+      "--data",
+      JSON.stringify({
+        operations: [
+          {
+            operationId: "first",
+            path: ["issues", "create"],
+            arguments: { title: "Batch one", teamId: 1 },
+          },
+          {
+            operationId: "second",
+            path: ["issues", "create"],
+            arguments: { title: "Batch two", teamId: 1 },
+          },
+        ],
+      }),
+      "--json",
+    ]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      results: [
+        { operationId: "first", result: { issue: { title: "Batch one" } } },
+        { operationId: "second", result: { issue: { title: "Batch two" } } },
+      ],
+    });
+  });
+
+  it("rolls back every Batch operation after one failure", () => {
+    const root = temporaryDirectory();
+    const database = path.join(root, "workspace.sqlite3");
+    const snapshot = path.join(root, "snapshot");
+    const storage = ["--db", database, "--sync-dir", snapshot];
+    expect(runTypeScript([...storage, "init", "--demo", "--json"]).status).toBe(
+      0,
+    );
+    const result = runTypeScript([
+      ...storage,
+      "batch",
+      "--actor",
+      "1",
+      "--data",
+      JSON.stringify({
+        operations: [
+          {
+            operationId: "valid",
+            path: ["agents", "create"],
+            arguments: { key: "same-key", name: "First" },
+          },
+          {
+            operationId: "duplicate",
+            path: ["agents", "create"],
+            arguments: { key: "same-key", name: "Second" },
+          },
+        ],
+      }),
+      "--json",
+    ]);
+    expect(result.status).not.toBe(0);
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      code: "batch_failed",
+      operationIndex: 1,
+      operationId: "duplicate",
+    });
+    const paths = storagePaths(database, snapshot);
+    const current = openDatabase(paths);
+    try {
+      expect(
+        current
+          .prepare("SELECT COUNT(*) AS count FROM actors WHERE key='same-key'")
+          .get(),
+      ).toEqual({ count: 0 });
+    } finally {
+      current.close();
+    }
+  });
+
   it("creates an agent through the command entry point", () => {
     const directory = temporaryDirectory();
     const database = path.join(directory, "workspace.sqlite3");

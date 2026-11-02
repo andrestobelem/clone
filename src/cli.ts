@@ -4,6 +4,7 @@ import path from "node:path";
 import { actions, fieldTypes, listFilters, resources } from "./commands.js";
 import { openDatabase } from "./database.js";
 import {
+  BatchOperationError,
   CloneError,
   InvalidInputError,
   RelationshipConflictError,
@@ -127,6 +128,7 @@ async function execute(
         String(parsed.options.scope ?? "All"),
       ),
     );
+  if (parsed.command === "batch") return executeBatch(parsed, paths);
   if (parsed.command === "export")
     return read(paths, (database) => ({
       ...bootstrap(database),
@@ -225,6 +227,81 @@ function readResource(
       );
     if (table === "app_settings") return JSON.parse(String(item.value_json));
     return item;
+  });
+}
+
+function executeBatch(
+  parsed: Parsed,
+  paths: ReturnType<typeof storagePaths>,
+): unknown {
+  const input = readPayload(parsed);
+  const actor = resolveActor(parsed, input, true).actorId;
+  const unknown = Object.keys(input).filter(
+    (key) => !["actorId", "operations"].includes(key),
+  );
+  if (unknown.length)
+    throw new InvalidInputError(`Unknown batch field: ${unknown.join(", ")}`);
+  if (!Array.isArray(input.operations) || !input.operations.length)
+    throw new InvalidInputError("Batch operations must be a non-empty array");
+  const operations = input.operations;
+  return mutate(paths, (database) => {
+    const results: Array<{ operationId: string; result: JsonObject }> = [];
+    operations.forEach((raw, operationIndex) => {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw))
+        throw new InvalidInputError("Each batch operation must be an object");
+      const operation = raw as JsonObject;
+      const operationId = String(operation.operationId ?? operationIndex);
+      try {
+        if (
+          !Array.isArray(operation.path) ||
+          operation.path.length !== 2 ||
+          operation.path.some((part) => typeof part !== "string")
+        )
+          throw new InvalidInputError(
+            "Batch operation path must contain two names",
+          );
+        const [resource, verb] = operation.path as string[];
+        const definition = actions[resource!]?.[verb!];
+        if (!definition)
+          throw new InvalidInputError(
+            `Unknown batch operation: ${operation.path.join(" ")}`,
+          );
+        if (
+          !operation.arguments ||
+          typeof operation.arguments !== "object" ||
+          Array.isArray(operation.arguments)
+        )
+          throw new InvalidInputError(
+            "Batch operation arguments must be an object",
+          );
+        const arguments_ = { ...(operation.arguments as JsonObject) };
+        if ("actorId" in arguments_)
+          throw new InvalidInputError("Batch operations use the Batch actor");
+        const route = definition.route
+          .replace("{id}", String(arguments_.id ?? ""))
+          .replace("{resource_id}", String(arguments_.resourceId ?? ""));
+        delete arguments_.id;
+        delete arguments_.resourceId;
+        const result = dispatchMutation(
+          database,
+          definition.method,
+          route,
+          { ...arguments_, actorId: actor },
+          paths,
+        );
+        if (Number(result._status ?? 200) >= 400)
+          throw new InvalidInputError(String(result.error ?? "Command failed"));
+        delete result._status;
+        results.push({ operationId, result });
+      } catch (error) {
+        throw new BatchOperationError(
+          operationIndex,
+          operationId,
+          convertError(error),
+        );
+      }
+    });
+    return { results };
   });
 }
 
@@ -410,6 +487,7 @@ function parseArguments(argv: string[]): Parsed {
     !resources[command] &&
     ![
       "init",
+      "batch",
       "context",
       "describe",
       "serve",
@@ -450,6 +528,7 @@ function validateCommandOptions(parsed: Parsed): void {
     allowed.add("open");
   }
   if (parsed.command === "init") allowed.add("demo");
+  if (parsed.command === "batch") allowed.add("data");
   if (parsed.command === "search") allowed.add("scope");
   if (parsed.command === "attachments") allowed.add("output");
   if (
@@ -513,6 +592,7 @@ function isKnownVerb(command: string, verb: string | undefined): boolean {
 function canonicalCommandPaths(): string[][] {
   const paths = [
     ["init"],
+    ["batch"],
     ["context"],
     ["describe"],
     ["serve"],
@@ -761,6 +841,20 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
     ],
   );
   add(
+    ["batch"],
+    [
+      argument(
+        "data",
+        ["--data"],
+        "string",
+        true,
+        undefined,
+        undefined,
+        "JSON object, @file.json, or - for stdin",
+      ),
+    ],
+  );
+  add(
     ["describe"],
     [
       {
@@ -921,7 +1015,7 @@ function argument(
 }
 function printHelp() {
   console.log(
-    `Clone ${packageVersion}\n\nUsage:\n  clone [--local | --data-dir PATH | --db PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH | --db PATH] <CLI command> [options]\n  clone context [--json]\n  clone describe [COMMAND...] [--json]`,
+    `Clone ${packageVersion}\n\nUsage:\n  clone [--local | --data-dir PATH | --db PATH] [start] [--port PORT] [--no-open]\n  clone [--local | --data-dir PATH | --db PATH] <CLI command> [options]\n  clone batch --actor ID --data @operations.json --json\n  clone context [--json]\n  clone describe [COMMAND...] [--json]`,
   );
 }
 function writeResult(value: unknown, json: boolean) {
