@@ -23,6 +23,7 @@ The application runs in one local process or several cooperating local processes
 | `src/schema.ts` | SQLite schema and stored domain constants |
 | `src/validation.ts` | Shared input types, dates, numeric bounds, and payload normalization |
 | `src/sync.ts` | File lock, stable snapshots, conflict checks, backups, import/export, migration, and recovery |
+| `src/commands.ts` | Canonical CLI paths, options, payload fields, and response contracts |
 | `src/database.ts` | `node:sqlite` connection settings and database helpers |
 | `bin/clone.js` | npm executable entry point |
 | `tests-ts/`, `tests/` | Runtime, package-contract, and UI model checks |
@@ -71,6 +72,8 @@ The CLI, HTTP server, and scheduler share this lock. Do not use a separate lock 
 Installed use defaults to the operating system's user data directory. `--local` uses `./.clone/`. `--data-dir` selects an explicit directory. Repository development uses `data/clone/`. Attachments, backups, and `.sync-*` state files are next to the selected database. The default snapshot is `snapshot/` next to that database; `--sync-dir` can select another directory.
 
 SQLite uses foreign keys and WAL mode. Snapshots contain all supported table rows and referenced attachment bytes. IDs, timestamps, inactive actors, archives, and history are retained. The manifest describes format version 2. Format-1 import creates member actors; explicit migration upgrades an existing database.
+
+Format 3 adds a stable Workspace ID, Record revisions, and append-only Work evidence. A caller supplies the revision it read before it changes an existing record. The shared mutation dispatcher checks and advances that revision inside the write transaction. A Batch invokes the same dispatcher for each operation and publishes one snapshot only after the complete transaction commits.
 
 Snapshot JSON is sorted and formatted with stable filenames. Digests detect database and snapshot changes outside synchronization. Validation checks the manifest, field types, foreign keys, actor profiles, issue/team status links, project/team links, and attachment paths and sizes.
 

@@ -55,6 +55,10 @@ There are no separate HTTP list routes for teams, labels, cycles, statuses, or s
 
 DELETE archives issues and projects. DELETE removes saved views and team resources. No member mutation, agent chat, document, or review route is provided. Snapshot synchronization and migration are CLI operations.
 
+Mutable record responses include `revision`. An update, archive, restore, or removal sends `ifRevision`. A stale value returns HTTP 409 with code `record_conflict`, the expected and current revisions, and `read_then_retry` recovery.
+
+Resource list responses contain `items` and `page.nextCursor`. The default limit is 100 and the maximum is 500. Cursors are opaque. Supported filters are applied before pagination.
+
 ## Common payloads
 
 | Action | Fields |

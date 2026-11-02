@@ -7,6 +7,9 @@ Clone is a local issue and project workspace. This glossary records the concepts
 **Workspace**:
 A container for teams and actors. Members are the people in the workspace.
 
+**Workspace ID**:
+A stable reference that identifies one workspace when its files move or are copied.
+
 **Team**:
 A group that owns issues, workflow statuses, and cycles. An issue belongs to one team. A project can link to more than one team.
 _Avoid_: Squad
@@ -45,6 +48,9 @@ An issue that belongs to a parent issue. Parent and sub-issue relationships form
 **Subscriber**:
 An actor that follows an issue.
 
+**Work evidence**:
+An attributed reference that records a commit, test result, or artifact for an issue.
+
 **Workflow status**:
 A state in a team's issue workflow.
 _Avoid_: Project status, state (when referring to an issue status)
@@ -72,6 +78,14 @@ A message for one actor about activity in the workspace.
 
 **Saved view**:
 A saved set of filters and display settings for issues or projects. Its scope can be personal, workspace-wide, or team-wide.
+
+## Safe changes
+
+**Record revision**:
+A number that identifies the current version of a mutable record. A successful change advances the number.
+
+**Batch**:
+An ordered group of workspace changes that succeeds or fails as one action.
 
 ## Automatic work
 

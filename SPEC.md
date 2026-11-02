@@ -6,12 +6,13 @@ Use the [glossary](GLOSSARY.md) for product terms. Implementation and storage co
 
 ## Workspace and identities
 
-- Each database contains one workspace. The UI can select a team and keep the selected team and page in browser storage.
+- Each database contains one workspace with a stable Workspace ID. The UI can select a team and keep the selected team and page in browser storage.
 - A team owns its issues, workflow statuses, and cycles. A project can link to multiple teams.
 - Members are human profiles. Each member has an actor identity. Agents have persistent actor identities with unique, fixed keys.
 - Actors can receive issues, lead projects, participate in teams and projects, subscribe to issues, and own saved views. Authors and activity records use actors.
 - Unknown or inactive actors cannot perform new writes or receive new assignments. Deactivation preserves history and existing relationships. An existing inactive participant can remain in an unchanged relationship.
 - The web UI uses actor 1. The CLI and API can select another actor. Actor selection does not authenticate a process or enforce roles.
+- A CLI mutation resolves its actor from an explicit option, the `CLONE_ACTOR_ID` environment variable, or its payload. Clone 0.3 warns before it uses the legacy actor 1 fallback. Clone 0.4 removes that fallback.
 - Human rosters are read-only. Member creation and invitations are not provided.
 
 ## Issues and workflow
@@ -24,6 +25,7 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - A project can contain an issue only when it links to the issue's team. A selected cycle must belong to that team. A selected milestone must belong to the issue's project. Parent links must not form a cycle.
 - A move or project change must clear or replace incompatible relationships in the same action. Older records are preserved on reads; changing a cycle or milestone relationship validates it.
 - Labels, subscribers, comments, relations, attachments, and sub-issues appear in issue details. Changes to labels and subscribers record activity and run update automations.
+- Issue details include append-only Work evidence for commits, tests, and artifacts.
 - Archive hides an issue from normal lists and search. Restore makes it available again. Comments and history remain stored.
 - Attachments must total no more than 3,000,000 bytes per upload. Empty files are rejected. Downloads use local attachment IDs.
 
@@ -41,6 +43,7 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 ## Finding and displaying work
 
 - Search returns active issues and projects. It matches issue identifiers, titles, descriptions, project names, summaries, and descriptions.
+- Resource lists are cursor-paginated and use stable ordering. Supported filters run against SQLite before pagination.
 - Issue lists and boards support filters, grouping, sorting, visible properties, sub-issue visibility, and empty status groups.
 - Active and completed visibility use workflow categories, including custom status names. Backlog uses the Backlog category.
 - Active excludes the Completed, Canceled, and Duplicate categories. Hiding completed issues hides all three categories. Progress counts only the Completed category.
@@ -60,6 +63,8 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - An issue's `recurringRule` field stores metadata. Only a recurring rule creates scheduled issues.
 - Scheduling uses UTC dates. A due rule creates one issue, advances past missed dates, and records actor 1. Monthly dates are clamped to the target month's last day. Later runs use that clamped date.
 - The database and complete snapshot are synchronized after successful mutations. Import replaces the complete database and attachments without events or automations.
+- Mutable records expose a Record revision. A change to an existing record must use the revision that the caller read. A stale change fails without writing.
+- A Batch contains canonical workspace mutations. Clone validates and commits the complete Batch in one transaction, then publishes one snapshot.
 - The UI issue import creates new issues from an issues array. It does not restore IDs, comments, history, or attachments. The UI uses the selected team for rows without a team ID.
 - Refresh and restart preserve records. Browser storage keeps page, team, and sidebar choices on that browser origin.
 

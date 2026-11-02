@@ -25,12 +25,14 @@ Use `npx @andrestobelem/clone --help` or add `--help` to any command. Global opt
 - `--data-dir PATH`: use an explicit storage directory.
 - `--db PATH`: use an explicit SQLite file. Without this option, Clone uses `workspace.sqlite3` in the selected local, explicit, or installed user data directory.
 - `--sync-dir PATH`: snapshot directory. The default is `snapshot/` next to the database.
-- `--actor ID`: actor who performs an action. The default is 1.
+- `--actor ID`: actor who performs an action. `CLONE_ACTOR_ID` supplies the actor when the option is absent. Clone 0.3 warns when both are absent and it uses actor 1. Clone 0.4 requires a selected actor.
 - `--json`: JSON output and JSON errors. Structured results also use JSON by default.
 
 Select only one of `--local`, `--data-dir`, and `--db`. Clone rejects ambiguous storage selection before it opens or creates storage. `--sync-dir` can be used with each storage mode.
 
 Run `context --json` to inspect the selected mode and the absolute database, data, snapshot, attachment, and backup paths. This command does not open or create storage.
+
+Run `doctor --json` to inspect the existing Workspace ID, schema, snapshot format, synchronization state, selected actor, and CLI compatibility. Doctor opens the database in read-only mode and does not change storage.
 
 Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for invalid input, 3 for a conflict, and 4 for a storage failure. A storage error can report that a change was committed and its export is pending. Do not repeat that change. Run `sync status` or `sync export` to recover it.
 
@@ -38,6 +40,7 @@ Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for inval
 | --- | --- |
 | `init` | Create empty storage; `--demo` adds demo records |
 | `context` | Show the resolved storage mode and paths in JSON |
+| `doctor` | Check workspace identity, compatibility, actor selection, and storage health |
 | `serve` | Start the web server and recurring scheduler |
 | `search` | Search active issues and projects |
 | `export` | Write UI JSON data to stdout |
@@ -57,6 +60,7 @@ Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for inval
 | `attachments` | get |
 | `sync` | status, export, import, validate, migrate |
 | `describe [COMMAND...]` | Full or filtered command catalog in JSON |
+| `batch` | Apply canonical mutations in one transaction and snapshot publication |
 
 Members remain read-only. CLI mutations use the same actions and validation as the API. Settings can store the rule configuration used by the existing UI. Entities that the app only reads or creates do not have update or delete commands.
 
@@ -78,6 +82,10 @@ npx @andrestobelem/clone recurring run
 ```
 
 Use `--data @file.json`, `--data -` for stdin, or a JSON object for a complete payload. Payload fields use the current API names, such as `teamId`, `labelIds`, and `subscriberIds`. Flags override the matching fields in `--data`. `--actor` overrides payload `actorId`, including the default actor 1. Use JSON `null` to clear a field. Array and object flags accept JSON.
+
+List commands return `{ "items": [], "page": { "nextCursor": null } }`. Use `--limit` and the returned opaque `--cursor` to read another page. The default limit is 100 and the maximum is 500.
+
+Changes to existing records require `--if-revision NUMBER`. Read the record again and retry with its current revision after a `record_conflict` error.
 
 ```sh
 npx @andrestobelem/clone issues update PRO-249 --data '{"assigneeId":null,"labelIds":[1,2]}'
