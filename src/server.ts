@@ -225,7 +225,12 @@ async function readBody(request: IncomingMessage): Promise<JsonObject> {
     chunks.push(buffer);
   }
   if (!size) return {};
-  const value = JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+  } catch {
+    throw new InvalidInputError("Request body must contain valid JSON");
+  }
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new InvalidInputError("Request body must be an object");
   return value as JsonObject;

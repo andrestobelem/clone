@@ -125,6 +125,24 @@ describe("HTTP input and revision regressions", () => {
     });
   });
 
+  it.each(["{", "[", "null", "42"])(
+    "returns invalid_input for malformed or non-object JSON: %s",
+    async (raw) => {
+      const route = "/api/issues/PRO-93";
+      const before = await (await fetch(baseUrl + route)).json();
+      const response = await fetch(baseUrl + route, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: raw,
+      });
+      expect(response.status).toBe(400);
+      const error = (await response.json()) as Record<string, unknown>;
+      expect(error.code).toBe("invalid_input");
+      expect(error).not.toHaveProperty("detail");
+      expect(await (await fetch(baseUrl + route)).json()).toEqual(before);
+    },
+  );
+
   it("does not advance a revision for an unsupported resource method", async () => {
     const route = "/api/issues/PRO-93";
     const before = (await (await fetch(baseUrl + route)).json()) as {

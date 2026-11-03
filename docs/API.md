@@ -10,6 +10,8 @@ Send mutation bodies as JSON objects. An omitted body is an empty object. Fields
 
 Creation usually returns HTTP 201. Other successful actions return HTTP 200. Response bodies vary by action: issue actions can return an assembled `issue`; project creation/update returns `projectId`; views return `viewId`; other actions return IDs or `ok`. Errors return a JSON `error` string. Shared errors also include `code` and available recovery details.
 
+Malformed JSON and non-object request bodies return HTTP 400 with code `invalid_input`.
+
 Request bodies are limited to 5,000,000 bytes. Attachments are base64 in JSON and must total no more than 3,000,000 decoded bytes per upload. HTTP responses do not include the internal `_status` field used by shared actions.
 
 ## Read routes
