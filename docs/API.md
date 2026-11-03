@@ -32,7 +32,7 @@ There are no separate HTTP list routes for teams, labels, cycles, statuses, or s
 
 ## Mutation routes
 
-`PATCH` and `PUT` both apply supplied fields; `PUT` does not replace an entire record.
+`PATCH` and `PUT` both apply supplied fields; `PUT` does not replace an entire record. Both methods validate the same fields and require the same `ifRevision` precondition.
 
 | Resource | Routes |
 | --- | --- |

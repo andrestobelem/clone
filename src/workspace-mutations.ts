@@ -32,6 +32,13 @@ export function dispatchMutation(
   raw: unknown,
   paths: StoragePaths,
 ): MutationResult {
+  if (
+    method === "PUT" &&
+    /^\/api\/(?:issues\/[^/]+|projects\/\d+|teams\/\d+|views\/\d+|preferences|settings)$/.test(
+      route,
+    )
+  )
+    method = "PATCH";
   const data = mutationPayload(raw, route, method);
   const actor = requireActor(database, data.actorId ?? 1);
   validateActorFields(database, data, method, route);
@@ -94,15 +101,26 @@ function revisionTarget(
   data: JsonObject,
 ): RevisionTarget | null {
   const agent = route.match(
-    /^\/api\/agents\/(\d+)(?:\/(?:deactivate|restore))?$/,
+    /^\/api\/agents\/(\d+)(?:\/(deactivate|restore))?$/,
   );
-  if (agent && ["PATCH", "POST"].includes(method))
+  if (
+    agent &&
+    ((method === "PATCH" && !agent[2]) || (method === "POST" && agent[2]))
+  )
     return { table: "actors", key: "id", value: Number(agent[1]) };
   const issue = route.match(/^\/api\/issues\/([^/]+)(?:\/(restore))?$/);
-  if (issue && ["PATCH", "DELETE", "POST"].includes(method))
+  if (
+    issue &&
+    ((method === "POST" && issue[2]) ||
+      (!issue[2] && ["PATCH", "DELETE"].includes(method)))
+  )
     return { table: "issues", key: "identifier", value: issue[1]! };
   const project = route.match(/^\/api\/projects\/(\d+)(?:\/(restore))?$/);
-  if (project && ["PATCH", "DELETE", "POST"].includes(method))
+  if (
+    project &&
+    ((method === "POST" && project[2]) ||
+      (!project[2] && ["PATCH", "DELETE"].includes(method)))
+  )
     return { table: "projects", key: "id", value: Number(project[1]) };
   const team = route.match(/^\/api\/teams\/(\d+)$/);
   if (team && method === "PATCH")
