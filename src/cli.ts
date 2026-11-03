@@ -743,6 +743,20 @@ function doctor(parsed: Parsed): Record<string, unknown> {
   const database = openDatabase(paths, { allowLegacy: true, readOnly: true });
   try {
     const version = schemaVersion(database);
+    if (version > 3)
+      return {
+        formatVersion: 1,
+        healthy: false,
+        cliVersion: packageVersion,
+        schemaVersion: version,
+        actorSelection,
+        compatibility: {
+          supported: false,
+          migrationRequired: false,
+          minimumCliVersion: null,
+        },
+        checks: [{ name: "schema", status: "unsupported" }],
+      };
     const workspace = database
       .prepare(
         version >= 3
@@ -760,7 +774,9 @@ function doctor(parsed: Parsed): Record<string, unknown> {
     const migrationRequired = version < 3;
     const actorReady = Boolean(actor && Number(actor.active));
     const clean =
-      !synchronization.files_changed && !synchronization.database_changed;
+      !synchronization.files_changed &&
+      !synchronization.database_changed &&
+      !synchronization.state_missing;
     return {
       formatVersion: 1,
       healthy: !migrationRequired && actorReady && clean,
@@ -791,7 +807,14 @@ function doctor(parsed: Parsed): Record<string, unknown> {
           name: "actor",
           status: actorReady ? "ok" : actor ? "inactive" : "missing",
         },
-        { name: "synchronization", status: clean ? "ok" : "conflict" },
+        {
+          name: "synchronization",
+          status: synchronization.state_missing
+            ? "state_missing"
+            : clean
+              ? "ok"
+              : "conflict",
+        },
       ],
     };
   } finally {

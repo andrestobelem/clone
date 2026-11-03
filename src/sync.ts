@@ -317,6 +317,7 @@ export function syncStatus(paths: StoragePaths): Record<string, unknown> {
       database_changed: false,
       differences: { added: [], changed: [], deleted: [] },
       migration_required: false,
+      state_missing: false,
     };
   const snapshot = diskFiles(paths.snapshotDirectory);
   let databaseFilesValue: Record<string, Buffer> = {};
@@ -342,13 +343,14 @@ export function syncStatus(paths: StoragePaths): Record<string, unknown> {
     ),
     differences: differences(snapshot, databaseFilesValue),
     migration_required: migrationRequired,
+    state_missing: databaseExists && !saved,
   };
 }
 
 export function recover(paths: StoragePaths, database: Database): void {
+  assertSupportedSchema(database);
   const journalPath = localPath(paths, "journal.json");
   if (!fs.existsSync(journalPath)) return;
-  assertSupportedSchema(database);
   const journal = readJson(journalPath) as unknown as Journal;
   const token = hasTable(database, "__sync_meta")
     ? (

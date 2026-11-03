@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "../src/cli.js";
 import { storagePaths } from "../src/paths.js";
@@ -107,4 +108,46 @@ describe("reviewed CLI contracts", () => {
       expect(read.output.comments).toEqual([]);
     },
   );
+
+  it("reports a future schema without assuming its tables or writing files", async () => {
+    const directory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "clone-future-review-"),
+    );
+    directories.push(directory);
+    const database = path.join(directory, "future.sqlite3");
+    const connection = new DatabaseSync(database);
+    connection.exec("PRAGMA user_version=4");
+    connection.close();
+    const before = fs.readFileSync(database);
+    const result = await cli(database, "doctor");
+    expect(result.code).toBe(0);
+    expect(result.output).toMatchObject({
+      healthy: false,
+      schemaVersion: 4,
+      compatibility: { supported: false },
+      checks: [{ name: "schema", status: "unsupported" }],
+    });
+    expect(fs.readFileSync(database)).toEqual(before);
+    expect(fs.readdirSync(directory)).toEqual(["future.sqlite3"]);
+  });
+
+  it("reports missing synchronization state as unhealthy", async () => {
+    const paths = fixture();
+    fs.rmSync(
+      path.join(
+        paths.dataDirectory,
+        `.sync-${path.basename(paths.database)}-state.json`,
+      ),
+    );
+    const result = await cli(paths.database, "doctor");
+    expect(result.code).toBe(0);
+    expect(result.output).toMatchObject({
+      healthy: false,
+      synchronization: { state_missing: true },
+    });
+    expect(result.output.checks).toContainEqual({
+      name: "synchronization",
+      status: "state_missing",
+    });
+  });
 });

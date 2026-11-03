@@ -89,4 +89,21 @@ describe("storage review regressions", () => {
     }
     expect(contents(paths.dataDirectory)).toEqual(before);
   });
+
+  it("reports absent synchronization state even when database and snapshot match", () => {
+    const paths = workspace();
+    expect(syncStatus(paths)).toMatchObject({ state_missing: false });
+    fs.renameSync(
+      path.join(paths.dataDirectory, ".sync-workspace.sqlite3-state.json"),
+      path.join(paths.dataDirectory, "saved-state.json"),
+    );
+    expect(syncStatus(paths)).toMatchObject({
+      state_missing: true,
+      files_changed: false,
+      database_changed: false,
+    });
+    expect(() => exportSnapshot(paths)).toThrow(
+      /Synchronization state is missing/,
+    );
+  });
 });

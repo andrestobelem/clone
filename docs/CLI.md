@@ -34,6 +34,8 @@ Run `context --json` to inspect the selected mode and the absolute database, dat
 
 Run `doctor --json` to inspect the existing Workspace ID, schema, snapshot format, synchronization state, selected actor, and CLI compatibility. Doctor opens the database in read-only mode and does not change storage.
 
+Doctor reports `healthy: false` for an unsupported future schema or missing synchronization state. A future schema returns a schema check with status `unsupported`; use a compatible Clone version. Missing state returns `synchronization.state_missing: true` and a synchronization check with status `state_missing`. Review recovery instructions before changing storage.
+
 Results use stdout. Errors use stderr. Exit codes are 0 for success, 2 for invalid input, 3 for a conflict, and 4 for a storage failure. A storage error can report that a change was committed and its export is pending. Do not repeat that change. Run `sync status` or `sync export` to recover it.
 
 | Command group | Actions |
