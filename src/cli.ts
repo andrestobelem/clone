@@ -251,11 +251,12 @@ function executeBatch(
   return mutate(paths, (database) => {
     const results: Array<{ operationId: string; result: JsonObject }> = [];
     operations.forEach((raw, operationIndex) => {
-      if (!raw || typeof raw !== "object" || Array.isArray(raw))
-        throw new InvalidInputError("Each batch operation must be an object");
-      const operation = raw as JsonObject;
-      const operationId = String(operation.operationId ?? operationIndex);
+      let operationId = String(operationIndex);
       try {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw))
+          throw new InvalidInputError("Each batch operation must be an object");
+        const operation = raw as JsonObject;
+        operationId = String(operation.operationId ?? operationIndex);
         if (
           !Array.isArray(operation.path) ||
           operation.path.length !== 2 ||

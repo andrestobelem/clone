@@ -74,4 +74,37 @@ describe("reviewed CLI contracts", () => {
       read.output.comments.map((comment: { body: string }) => comment.body),
     ).toEqual([body, body]);
   });
+
+  it.each([null, [], 7, "invalid"])(
+    "identifies a malformed Batch operation and rolls back prior work: %j",
+    async (invalid) => {
+      const paths = fixture();
+      const result = await cli(
+        paths.database,
+        "batch",
+        "--actor",
+        "1",
+        "--data",
+        JSON.stringify({
+          operations: [
+            {
+              operationId: "first",
+              path: ["issues", "comment"],
+              arguments: { id: "PRO-93", body: "must roll back" },
+            },
+            invalid,
+          ],
+        }),
+      );
+      expect(result.code).toBe(2);
+      expect(result.error).toMatchObject({
+        code: "batch_failed",
+        operationIndex: 1,
+        operationId: "1",
+        cause: { code: "invalid_input" },
+      });
+      const read = await cli(paths.database, "issues", "show", "PRO-93");
+      expect(read.output.comments).toEqual([]);
+    },
+  );
 });
