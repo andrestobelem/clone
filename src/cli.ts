@@ -477,7 +477,10 @@ function parseArguments(argv: string[]): Parsed {
       words.push(token);
       continue;
     }
-    const [rawKey, inline] = token.slice(2).split("=", 2);
+    const option = token.slice(2);
+    const separator = option.indexOf("=");
+    const rawKey = separator < 0 ? option : option.slice(0, separator);
+    const inline = separator < 0 ? undefined : option.slice(separator + 1);
     const key = camel(rawKey!);
     if (
       ["json", "all", "demo", "dryRun", "force", "local", "noOpen"].includes(
