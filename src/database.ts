@@ -23,6 +23,14 @@ export function openDatabase(
       "Database not found. Run init or sync import first.",
     );
   }
+  if (!options.readOnly && fs.existsSync(paths.database)) {
+    const inspection = new DatabaseSync(paths.database, { readOnly: true });
+    try {
+      assertSupportedSchema(inspection);
+    } finally {
+      inspection.close();
+    }
+  }
   if (options.create) {
     fs.mkdirSync(paths.dataDirectory, { recursive: true });
   }
@@ -33,6 +41,14 @@ export function openDatabase(
     enableForeignKeyConstraints: true,
     timeout: 15_000,
   });
+  if (!options.readOnly) {
+    try {
+      assertSupportedSchema(database);
+    } catch (error) {
+      database.close();
+      throw error;
+    }
+  }
   database.exec("PRAGMA foreign_keys = ON");
   if (!options.readOnly) database.exec("PRAGMA journal_mode = WAL");
 
@@ -43,6 +59,14 @@ export function openDatabase(
     );
   }
   return database;
+}
+
+export function assertSupportedSchema(database: Database): void {
+  if (schemaVersion(database) > 3) {
+    throw new InvalidInputError(
+      "Database schema is newer than this Clone version. Use a compatible Clone version.",
+    );
+  }
 }
 
 export function schemaVersion(database: Database): number {

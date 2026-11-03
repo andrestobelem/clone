@@ -6,6 +6,7 @@ import lockfile from "proper-lockfile";
 
 import {
   hasTable,
+  assertSupportedSchema,
   openDatabase,
   schemaVersion,
   type Database,
@@ -145,6 +146,7 @@ export function exportSnapshot(
 ): Record<string, unknown> {
   const database = existing ?? openDatabase(paths, { allowLegacy: true });
   try {
+    assertSupportedSchema(database);
     recover(paths, database);
     if (!options.force) checkFiles(paths, database, "export");
     const files = databaseFiles(paths, database);
@@ -178,6 +180,17 @@ export function importSnapshot(
   paths: StoragePaths,
   options: { readonly force?: boolean; readonly dryRun?: boolean } = {},
 ): Record<string, unknown> {
+  if (fs.existsSync(paths.database)) {
+    const inspection = openDatabase(paths, {
+      allowLegacy: true,
+      readOnly: true,
+    });
+    try {
+      assertSupportedSchema(inspection);
+    } finally {
+      inspection.close();
+    }
+  }
   const loaded = loadSnapshot(paths);
   const records = upgradeRecordsToCurrent(
     loaded.records,
@@ -335,6 +348,7 @@ export function syncStatus(paths: StoragePaths): Record<string, unknown> {
 export function recover(paths: StoragePaths, database: Database): void {
   const journalPath = localPath(paths, "journal.json");
   if (!fs.existsSync(journalPath)) return;
+  assertSupportedSchema(database);
   const journal = readJson(journalPath) as unknown as Journal;
   const token = hasTable(database, "__sync_meta")
     ? (
