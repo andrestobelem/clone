@@ -6,20 +6,21 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8').replace(/boot\(\);\s*$/, '');
-function model() {
+function model(globals = {}) {
   const nodes = new Map();
+  const listeners = new Map();
   const document = {
     querySelector(selector) {
-      if (!nodes.has(selector)) nodes.set(selector, { innerHTML: '', addEventListener() {} });
+      if (!nodes.has(selector)) nodes.set(selector, { innerHTML: '', addEventListener(event, callback) { listeners.set(`${selector}:${event}`, callback); } });
       return nodes.get(selector);
     },
     querySelectorAll() { return []; },
     addEventListener() {},
   };
-  const context = vm.createContext({ document, console });
+  const context = vm.createContext({ document, console, ...globals });
   vm.runInContext(source, context);
   vm.runInContext(`data={teams:[{id:1},{id:2}],settings:{},issues:[],projects:[],views:[],statuses:[],actors:[]};`, context);
-  return { run: code => {
+  return { dispatch: (selector, event) => listeners.get(`${selector}:click`)(event), runAsync: code => vm.runInContext(code, context), run: code => {
     const value = vm.runInContext(code, context);
     return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   } };
@@ -36,6 +37,62 @@ test('Active and completed visibility use custom workflow categories', () => {
   assert.deepEqual(m.run('filterIssues().map(i=>i.id)'), [2]);
   m.run(`currentView='All issues'; display.showCompleted=false;`);
   assert.deepEqual(m.run('filterIssues().map(i=>i.id)'), [2]);
+});
+
+test('Saved-view tab saves reconcile revisions before a later explicit save', async () => {
+  let revision = 1;
+  const sent = [];
+  const m = model({ fetch: async (_path, options) => {
+    const body = JSON.parse(options.body);
+    sent.push(body.ifRevision);
+    assert.equal(body.ifRevision, revision);
+    revision++;
+    return { ok:true, json:async () => ({viewId:1}) };
+  }});
+  m.run('data.views=[{id:1,revision:1}];viewId=1;refresh=async()=>{};toast=()=>{};void 0;');
+  const click = {target:{closest:()=>true}};
+  m.dispatch('#view-tabs', click);
+  await m.runAsync('Promise.all([...viewSaves.values()])');
+  m.dispatch('#view-tabs', click);
+  await m.runAsync('Promise.all([...viewSaves.values()])');
+  await m.runAsync('action("update-view",{dataset:{}})');
+  assert.deepEqual(sent,[1,2,3]);
+  assert.equal(m.run('data.views[0].revision'),4);
+});
+
+test('Rapid saved-view clicks serialize writes and preserve each selected payload', async () => {
+  let revision = 1;
+  let active = 0;
+  const sent = [];
+  const m = model({ fetch: async (_path, options) => {
+    const body = JSON.parse(options.body);
+    assert.equal(++active,1);
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(body.ifRevision,revision++);
+    sent.push(body.filters.status);
+    active--;
+    return {ok:true,json:async()=>({viewId:1})};
+  }});
+  m.run('data.views=[{id:1,revision:1}];viewId=1;filters.status="Todo";');
+  const click = {target:{closest:()=>true}};
+  m.dispatch('#view-tabs',click);
+  m.run('filters.status="Done"');
+  m.dispatch('#view-tabs',click);
+  await m.runAsync('Promise.all([...viewSaves.values()])');
+  assert.deepEqual(sent,['Todo','Done']);
+  assert.equal(m.run('data.views[0].revision'),3);
+});
+
+test('A remote saved-view conflict remains visible without automatic retry', async () => {
+  let calls = 0;
+  const m = model({fetch:async()=>{
+    calls++;
+    return {ok:false,json:async()=>({error:'Record revision conflict'})};
+  }});
+  m.run('data.views=[{id:1,revision:1}];viewId=1;');
+  await assert.rejects(m.runAsync('saveView(viewId,{filters,display},true)'),/Record revision conflict/);
+  assert.equal(calls,1);
+  assert.equal(m.run('data.views[0].revision'),1);
 });
 
 test('Backlog supports a custom workflow name', () => {

@@ -12,6 +12,7 @@ let display = {layout:"List", groupBy:"Status", orderBy:"Updated", direction:"De
 let searchTimer = null, searchRequest = 0, modalFocus = null, searchFocus = null;
 let popoverNode = null, searchScope = "All", viewId = null, issueParentId = null, activeTeamId = 1, importPreview = null;
 let settingsSection = "preferences";
+const viewSaves = new Map();
 
 function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function priorityName(v) { return typeof v === "number" ? PRIORITIES[v] || "No priority" : v || "No priority"; }
@@ -35,6 +36,23 @@ async function refresh() { data = await api("/api/bootstrap"); normalizeData(); 
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 2600); }
 function report(error) { console.error(error); toast(error.message || "Could not save changes"); }
 async function save(method, path, body) { const result = await api(path, {method, body}); await refresh(); return result; }
+function saveView(id, body, refreshAfter = false) {
+  const changes = JSON.parse(JSON.stringify(body));
+  const previous = viewSaves.get(id) || Promise.resolve();
+  const pending = previous.catch(() => {}).then(async () => {
+    const view = data.views.find(v => v.id === id);
+    const payload = withRevision(view, changes);
+    const result = await api("/api/views/" + id, {method:"PATCH",body:payload});
+    view.revision = payload.ifRevision + 1;
+    if (changes.filters) view.filters = changes.filters;
+    if (changes.display) view.display = changes.display;
+    if (refreshAfter) await refresh();
+    return result;
+  });
+  viewSaves.set(id, pending);
+  pending.then(() => { if(viewSaves.get(id)===pending)viewSaves.delete(id); }, () => { if(viewSaves.get(id)===pending)viewSaves.delete(id); });
+  return pending;
+}
 function priorityMark(v) { return ["⇈","↑","↗","↓","–"][priorityIndex(v)] || "–"; }
 function statusClass(v) { return STATUS_CLASS[v] || "backlog"; }
 function actorLabel(actor) { return actor ? actor.name + (actor.kind === "agent" ? " (Agent)" : "") : ""; }
@@ -471,7 +489,7 @@ async function action(action, node) {
   const handler=ACTION_HANDLERS[action];
   if(handler)return handler(node);
   const id=Number(node?.dataset.id||0);
-  if(action==="update-view") { if(!viewId)return;const view=data.views.find(v=>v.id===viewId);await api("/api/views/"+viewId,{method:"PATCH",body:withRevision(view,{filters,display})});await refresh();toast("Saved view updated");return; }
+  if(action==="update-view") { if(!viewId)return;await saveView(viewId,{filters,display},true);toast("Saved view updated");return; }
   if(action==="edit-view") { const view=data.views.find(v=>v.id===id);if(view)openViewModal(view);return; }
   if(action==="new-resource") { const body=field("Title",input("title","","Resource name","text","required"),true)+field("Section",input("section","Resources","Section name"))+field("Link",input("url","","https://…","url","required"),true);openModal("Add team resource","team-resource-form",body,"Add resource");return; }
   if(action==="delete-resource") { if(!confirm("Remove this team resource?"))return;const resource=team().resources.find(r=>r.id===id);await api("/api/teams/"+activeTeamId+"/resources/"+id,{method:"DELETE",body:withRevision(resource)});return refresh(); }
@@ -576,7 +594,7 @@ $("#filter-button").onclick=event=>openPopoverForFilters(event.currentTarget);
 $("#display-button").onclick=event=>openPopoverForDisplay(event.currentTarget);
 $("#details-toggle").onclick=()=>{if(selectedIssue)renderPage();else toast("Open an issue to see its details");};
 $("#share-view").onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast("Link copied");}catch{toast("Copy this page URL to share it");}};
-$("#view-tabs").addEventListener("click",event=>{if(event.target.closest(".view-pill")&&viewId){const v=data.views.find(x=>x.id===viewId);if(v)api("/api/views/"+v.id,{method:"PATCH",body:withRevision(v,{filters,display})}).catch(report);}});
+$("#view-tabs").addEventListener("click",event=>{if(event.target.closest(".view-pill")&&viewId)saveView(viewId,{filters,display}).catch(report);});
 content.addEventListener("submit",async event=>{const form=event.target.closest("form");if(!form)return;event.preventDefault();try{await submitForm(form);}catch(error){report(error);}});
 modalLayer.addEventListener("submit",async event=>{const form=event.target.closest("form");if(!form)return;event.preventDefault();try{await submitForm(form);}catch(error){report(error);}});
 content.addEventListener("change",async event=>{
