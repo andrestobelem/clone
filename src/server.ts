@@ -113,7 +113,7 @@ async function handle(
   } catch (error) {
     const status =
       error instanceof CloneError
-        ? error.code === "sync_conflict"
+        ? ["sync_conflict", "record_conflict"].includes(error.code)
           ? 409
           : error.code === "pending_export"
             ? 503

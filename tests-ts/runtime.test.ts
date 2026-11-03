@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import net from "node:net";
+import { once } from "node:events";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -20,6 +22,66 @@ afterEach(() => {
 });
 
 describe("TypeScript runtime", () => {
+  it("returns HTTP 409 for a stale revision without changing the record", async () => {
+    const paths = storagePaths(
+      path.join(temporaryDirectory(), "workspace.sqlite3"),
+    );
+    initialize(paths, true);
+    const reservation = net.createServer();
+    reservation.listen(0, "127.0.0.1");
+    await once(reservation, "listening");
+    const address = reservation.address() as net.AddressInfo;
+    await new Promise<void>((resolve) => reservation.close(() => resolve()));
+    const child = spawn(
+      process.execPath,
+      [
+        "bin/clone.js",
+        "--db",
+        paths.database,
+        "start",
+        "--port",
+        String(address.port),
+        "--no-open",
+      ],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
+    try {
+      await Promise.race([
+        once(child.stdout!, "data"),
+        once(child, "exit").then(() => {
+          throw new Error("Server exited before startup");
+        }),
+      ]);
+      const url = `http://127.0.0.1:${address.port}/api/issues/PRO-93`;
+      const before = (await (await fetch(url)).json()) as {
+        revision: number;
+        title: string;
+      };
+      const update = (revision: number, title: string) =>
+        fetch(url, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ actorId: 1, ifRevision: revision, title }),
+        });
+      expect((await update(before.revision, "First writer")).status).toBe(200);
+      const conflict = await update(before.revision, "Stale writer");
+      expect(conflict.status).toBe(409);
+      expect(await conflict.json()).toMatchObject({
+        code: "record_conflict",
+        expectedRevision: before.revision,
+        currentRevision: before.revision + 1,
+        recovery: "read_then_retry",
+      });
+      expect(await (await fetch(url)).json()).toMatchObject({
+        title: "First writer",
+        revision: before.revision + 1,
+      });
+    } finally {
+      const exited = once(child, "exit");
+      child.kill("SIGTERM");
+      await exited;
+    }
+  });
   it("creates a usable empty workspace", () => {
     const directory = temporaryDirectory();
     const paths = storagePaths(path.join(directory, "workspace.sqlite3"));
