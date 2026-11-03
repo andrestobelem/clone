@@ -97,6 +97,14 @@ npx @andrestobelem/clone@0.3.0 settings update --actor 1 --if-revision 1 --key p
 
 ## Git workflow
 
+### Record work evidence
+
+```sh
+npx @andrestobelem/clone@0.3.0 issues evidence PRO-249 --actor 6 --kind test --reference 'npm run check' --result pass --summary 'Runtime and UI checks passed' --json
+```
+
+Use `commit`, `test`, or `artifact` for `--kind`. The optional `--result` accepts `pass`, `fail`, or `not_applicable`. Evidence is append-only and needs no `--if-revision`. Read `issues show` to verify it. Record the scope of the check; a local test does not establish a deployed result.
+
 The web server, CLI, and recurring issue scheduler export after each change. With the direct CLI defaults, the complete snapshot is stored in `data/snapshot/`. SQLite, local sync state, and backups stay outside Git. Other database paths use a `snapshot/` directory next to the database unless `--sync-dir` selects another directory.
 
 ```sh

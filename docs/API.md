@@ -8,7 +8,7 @@ Send mutation bodies as JSON objects. An omitted body is an empty object. Fields
 
 `actorId` selects the actor for a mutation and defaults to 1. IDs must be integers. Unknown or inactive actors return a relationship conflict. Existing inactive assignments and participation can remain when an update preserves them. Bootstrap uses actor 1; actor selection does not create a separate web session.
 
-Creation usually returns HTTP 201. Other successful actions return HTTP 200. Response bodies vary by action: issue actions can return an assembled `issue`; project creation/update returns `projectId`; views return `viewId`; other actions return IDs or `ok`. Errors return a JSON `error` string.
+Creation usually returns HTTP 201. Other successful actions return HTTP 200. Response bodies vary by action: issue actions can return an assembled `issue`; project creation/update returns `projectId`; views return `viewId`; other actions return IDs or `ok`. Errors return a JSON `error` string. Shared errors also include `code` and available recovery details.
 
 Request bodies are limited to 5,000,000 bytes. Attachments are base64 in JSON and must total no more than 3,000,000 decoded bytes per upload. HTTP responses do not include the internal `_status` field used by shared actions.
 
@@ -38,7 +38,7 @@ There are no separate HTTP list routes for teams, labels, cycles, statuses, or s
 | --- | --- |
 | Agents | `POST /api/agents`; `PATCH /api/agents/ID`; `POST /api/agents/ID/deactivate`; `POST /api/agents/ID/restore` |
 | Issues | `POST /api/issues`; `PATCH` or `PUT /api/issues/IDENTIFIER`; `DELETE /api/issues/IDENTIFIER`; `POST /api/issues/IDENTIFIER/restore` |
-| Issue details | `POST /api/issues/IDENTIFIER/comments`, `/attachments`, or `/relations` |
+| Issue details | `POST /api/issues/IDENTIFIER/comments`, `/attachments`, `/relations`, or `/evidence` |
 | Projects | `POST /api/projects`; `PATCH` or `PUT /api/projects/ID`; `DELETE /api/projects/ID`; `POST /api/projects/ID/restore` |
 | Project details | `POST /api/projects/ID/milestones`, `/updates`, or `/dependencies` |
 | Teams | `POST /api/teams`; `PATCH` or `PUT /api/teams/ID`; `POST /api/teams/ID/resources`; `DELETE /api/teams/ID/resources/RESOURCE_ID` |
@@ -57,7 +57,7 @@ DELETE archives issues and projects. DELETE removes saved views and team resourc
 
 Mutable record responses include `revision`. An update, archive, restore, or removal sends `ifRevision`. A stale value returns HTTP 409 with code `record_conflict`, the expected and current revisions, and `read_then_retry` recovery.
 
-Resource list responses contain `items` and `page.nextCursor`. The default limit is 100 and the maximum is 500. Cursors are opaque. Supported filters are applied before pagination.
+CLI resource list responses contain `items` and `page.nextCursor`, with a default limit of 100 and a maximum of 500. This CLI envelope does not apply to HTTP bootstrap or the actor list routes above. Batch and workspace diagnostics are also CLI operations.
 
 ## Common payloads
 
@@ -67,6 +67,7 @@ Resource list responses contain `items` and `page.nextCursor`. The default limit
 | Create issue | Required `title`; `teamId` defaults to 1; omitted `status` uses team default; optional `description`, `priority`, `assigneeId`, `projectId`, `cycleId`, `milestoneId`, `parentId`, `estimate`, `dueDate`, `externalUrl`, `labelIds`, `subscriberIds`, `recurringRule` |
 | Update issue | Supplied issue fields, including `teamId`; `labelIds` and `subscriberIds` replace their lists |
 | Comment | Required `body` |
+| Work evidence | Required `kind` (`commit`, `test`, or `artifact`) and `reference`; optional `result` (`pass`, `fail`, or `not_applicable`) and `summary`. Evidence is append-only, attributed, and included in issue details. It does not require an issue revision. |
 | Attach | Required nonempty `files` array; each item has `name`, base64 `data`, and optional MIME `type` |
 | Relate | `relatedIssueId` is an issue identifier, or provide `url`; optional relation `type` |
 | Create/update project | Required `name` on creation; optional `summary`, `description`, `status`, `priority`, `icon`, `leadId`, `startDate`, `targetDate`, `teamIds`, `memberIds`, `labelIds`; creation also accepts `dependencies` and `milestones` |

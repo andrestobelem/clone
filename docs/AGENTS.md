@@ -44,6 +44,8 @@ Replace example IDs and identifiers with values from the workspace. Read the res
 
 List responses contain `items` and `page.nextCursor`. Read every required page. Existing-record changes require the revision returned by the last read. Use Batch for multiple independent mutations that must commit together.
 
+Record verified work with `issues evidence`. Use `kind` values `commit`, `test`, or `artifact` and a concrete `reference`. Test results use `pass`, `fail`, or `not_applicable`. Append-only evidence and comments do not require the issue revision. Evidence records what was checked; it does not prove deployment or complete an issue automatically.
+
 A project can only contain issues from its linked teams. A cycle belongs to the issue team, and a milestone belongs to its project. When moving an issue, clear or replace incompatible references in the same action. The issue identifier stays unchanged. To add participants to a team or project, use `memberIds`. Agents can also own saved views and subscribe to issues. Members remain human profiles.
 
 ## Handle failures

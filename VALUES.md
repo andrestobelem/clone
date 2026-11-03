@@ -29,6 +29,7 @@ People and agents act through explicit identities. History shows who performed e
 Writes are validated, recorded, and checked. Recovery protects a committed change from accidental repetition or loss.
 
 **Evidence:** Tests cover input validation, the saved result, and recovery after an interrupted write or publication.
+Record revisions prevent a stale caller from overwriting a newer change. Work evidence keeps the checked result attributable to its actor.
 
 ## Portable records
 

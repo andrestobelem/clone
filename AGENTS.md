@@ -36,4 +36,6 @@
 
 ## Workspace operations
 
+- Treat the command catalog as the operation contract. Use [docs/AGENTS.md](docs/AGENTS.md) for identity, revisions, pagination, Batch, evidence, and recovery. Read it before operating a workspace.
+
 - For any workspace record read or write, follow [.agents/skills/workspace-operations/SKILL.md](.agents/skills/workspace-operations/SKILL.md). It defines the CLI, actor identity, verification, and recovery procedure.
