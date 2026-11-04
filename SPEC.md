@@ -46,6 +46,7 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - Resource lists are cursor-paginated and use stable ordering. Supported filters run against SQLite before pagination.
 - Issue lists and boards support filters, grouping, sorting, visible properties, sub-issue visibility, and empty status groups.
 - Selecting List or Board from a detail returns to the collection. Issue view filters and display settings remain selected.
+- The issue details control shows or hides editable properties and labels. It preserves unfinished form input and is disabled when no issue is open.
 - Active and completed visibility use workflow categories, including custom status names. Backlog uses the Backlog category.
 - Active excludes the Completed, Canceled, and Duplicate categories. Hiding completed issues hides all three categories. Progress counts only the Completed category.
 - Issue filters include status, priority, assignee, creator, project, project status, label, subscribers, relations, external-link presence, and due date.

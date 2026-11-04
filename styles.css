@@ -106,3 +106,7 @@ body{min-width:360px}
 .team-section>.add-team{float:right;margin-top:-23px;padding:3px 8px}
 .team-name{width:100%;text-align:left}
 @media(max-width:760px){.team-section>.add-team{float:none;margin-top:0}}
+
+#details-toggle[aria-expanded=true]{background:#e8e7f7;color:#6867ad}
+#details-toggle:disabled{opacity:.45;cursor:default}
+@media(max-width:650px){#issue-properties .property-grid{grid-template-columns:1fr}}

@@ -11,7 +11,14 @@ function model(globals = {}) {
   const listeners = new Map();
   const document = {
     querySelector(selector) {
-      if (!nodes.has(selector)) nodes.set(selector, { innerHTML: '', addEventListener(event, callback) { listeners.set(`${selector}:${event}`, callback); } });
+      if (!nodes.has(selector)) {
+        const classes = new Set(), attributes = new Map();
+        nodes.set(selector, { innerHTML: '',
+          classList: { toggle(name, enabled) { const next=enabled??!classes.has(name);next?classes.add(name):classes.delete(name);return next; }, contains(name) { return classes.has(name); } },
+          setAttribute(name,value) { attributes.set(name,String(value)); }, getAttribute(name) { return attributes.get(name)??null; },
+          addEventListener(event, callback) { listeners.set(`${selector}:${event}`, callback); }
+        });
+      }
       return nodes.get(selector);
     },
     querySelectorAll() { return []; },
@@ -20,7 +27,7 @@ function model(globals = {}) {
   const context = vm.createContext({ document, console, ...globals });
   vm.runInContext(source, context);
   vm.runInContext(`data={teams:[{id:1},{id:2}],settings:{},issues:[],projects:[],views:[],statuses:[],actors:[]};`, context);
-  return { dispatch: (selector, event) => listeners.get(`${selector}:click`)(event), runAsync: code => vm.runInContext(code, context), run: code => {
+  return { event: (selector, type, event) => listeners.get(`${selector}:${type}`)(event), dispatch: (selector, event) => listeners.get(`${selector}:click`)(event), runAsync: code => vm.runInContext(code, context), run: code => {
     const value = vm.runInContext(code, context);
     return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   } };
@@ -182,4 +189,16 @@ test('Board and list choices leave issue detail without discarding view settings
   }
   m.run(`selectedProject=3;currentPage='Projects';setCollectionLayout('Board');`);
   assert.equal(m.run('selectedProject'),null);
+});
+
+test('Issue properties toggle without replacing an unfinished form', () => {
+  const m=model();
+  m.run(`selectedIssue='PRO-1';$('#content-area').innerHTML='unsaved text';`);
+  m.run('toggleIssueProperties()');
+  assert.equal(m.run(`$('#issue-properties').classList.contains('hidden')`),true);
+  assert.equal(m.run(`$('#details-toggle').getAttribute('aria-expanded')`),'false');
+  assert.equal(m.run(`$('#content-area').innerHTML`),'unsaved text');
+  m.run('toggleIssueProperties()');
+  assert.equal(m.run(`$('#issue-properties').classList.contains('hidden')`),false);
+  assert.equal(m.run(`$('#details-toggle').getAttribute('aria-expanded')`),'true');
 });
