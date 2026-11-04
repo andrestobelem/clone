@@ -5,7 +5,7 @@ description: Operate a Clone issue and project workspace from another repository
 
 # Clone workspace
 
-Use Clone `0.3.0` through `npx --yes --loglevel=error @andrestobelem/clone@0.3.0`. These npm options leave stdout and stderr available for Clone JSON. For repeated operations with a local dependency, use `npx --no-install clone`. The CLI and browser use the same records and actions. A web server is not required for CLI work.
+Use Clone `0.3.1` through `npx --yes --loglevel=error @andrestobelem/clone@0.3.1`. These npm options leave stdout and stderr available for Clone JSON. For repeated operations with a local dependency, use `npx --no-install clone`. The CLI and browser use the same records and actions. A web server is not required for CLI work.
 
 ## Select storage
 
@@ -45,10 +45,10 @@ Perform the requested action with JSON output. After each write, read the result
 Example with repository-local storage:
 
 ```sh
-npx --yes --loglevel=error @andrestobelem/clone@0.3.0 --local teams list --json
-npx --yes --loglevel=error @andrestobelem/clone@0.3.0 --local issues show PRO-248 --json
-npx --yes --loglevel=error @andrestobelem/clone@0.3.0 --local issues update PRO-248 --actor 6 --if-revision 3 --status "In Progress" --json
-npx --yes --loglevel=error @andrestobelem/clone@0.3.0 --local issues show PRO-248 --json
+npx --yes --loglevel=error @andrestobelem/clone@0.3.1 --local teams list --json
+npx --yes --loglevel=error @andrestobelem/clone@0.3.1 --local issues show PRO-248 --json
+npx --yes --loglevel=error @andrestobelem/clone@0.3.1 --local issues update PRO-248 --actor 6 --if-revision 3 --status "In Progress" --json
+npx --yes --loglevel=error @andrestobelem/clone@0.3.1 --local issues show PRO-248 --json
 ```
 
 Use `--data -` for a JSON object through stdin or `--data @file.json` for a file. Flags override matching payload fields. Use JSON `null` to clear nullable fields.

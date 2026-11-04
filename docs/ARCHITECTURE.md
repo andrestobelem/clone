@@ -97,4 +97,4 @@ The default bind address is `127.0.0.1`. `CLONE_HOST` can change it, but the app
 
 ## Distribution
 
-The root npm package contains the compiled TypeScript runtime and static UI. It does not download a platform executable. `npx @andrestobelem/clone@0.3.0` runs the package executable. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory.
+The root npm package contains the compiled TypeScript runtime and static UI. It does not download a platform executable. `npx @andrestobelem/clone@0.3.1` runs the package executable. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory.
