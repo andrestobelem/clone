@@ -173,3 +173,13 @@ test('Project update ordering follows timestamps and direction', () => {
   m.run("display.direction='Ascending';");
   assert.deepEqual(m.run('filterProjects().map(p=>p.id)'),[2,1]);
 });
+
+test('Board and list choices leave issue detail without discarding view settings', () => {
+  const m = model();
+  for (const layout of ['Board','List']) {
+    m.run(`selectedIssue='PRO-1';currentPage='Issues';viewId=9;filters.priority='High';display.groupBy='Assignee';setCollectionLayout('${layout}');`);
+    assert.deepEqual(m.run('[selectedIssue,display.layout,viewId,filters.priority,display.groupBy]'), [null,layout,9,'High','Assignee']);
+  }
+  m.run(`selectedProject=3;currentPage='Projects';setCollectionLayout('Board');`);
+  assert.equal(m.run('selectedProject'),null);
+});
