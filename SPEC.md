@@ -47,7 +47,7 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - Issue lists and boards support filters, primary and secondary grouping, sorting, visible properties, sub-issue visibility, and empty status groups.
 - Selecting List or Board from a detail returns to the collection. Issue view filters and display settings remain selected.
 - The issue details control shows or hides editable properties and labels. It preserves unfinished form input and is disabled when no issue is open.
-- Board cards use the selected visible properties. Dragging between status columns changes the issue status with its read Record revision. Other grouping modes do not accept drops or manual ordering.
+- Board cards use the selected visible properties. Dragging between status columns changes the issue status with its read Record revision. Each status column accepts drops in the blank space below its cards, through the full board height. Other grouping modes do not accept drops or manual ordering.
 - Active and completed visibility use workflow categories, including custom status names. Backlog uses the Backlog category.
 - Active excludes the Completed, Canceled, and Duplicate categories. Hiding completed issues hides all three categories. Progress counts only the Completed category.
 - Issue filters include status, priority, assignee, creator, project, project status, label, subscribers, relations, external-link presence, and due date.

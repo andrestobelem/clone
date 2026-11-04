@@ -35,6 +35,7 @@ Reload after changes because there is no hot reload. Use temporary storage for t
 - Create an issue. Edit its title, status, assignment, dates, comment, and attachment.
 - Create a custom Completed status. Check Active, completed visibility, triage, and progress.
 - Check issue list and board layouts, filters, grouping, empty groups, and sorting.
+- Drag a card into the blank space below another status column, outside its gray card area. Confirm the new status after reload. Repeat with an empty status column. Dropping between columns or under a non-status group must not change a record.
 - Create and edit a project. Check teams, participants, milestones, updates, dependencies, archive, and restore.
 - Save a team view. Confirm that another team's view does not appear.
 - Check Inbox actions, cycles, human rosters, and preferences.

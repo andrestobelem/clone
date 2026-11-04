@@ -225,7 +225,7 @@ function renderIssues() {
   if (!list.length && !(display.showEmptyGroups && display.groupBy === "Status" && statuses().length)) { content.innerHTML = '<div class="empty-state"><div class="empty-illustration"><span>◇</span></div><h2>No issues found</h2><p>Change your filters or create an issue for ' + esc(team().name) + '.</p><button class="primary-button" data-action="new-issue">Create issue</button></div>'; return; }
   const groups = issueGroups(list);
   if (display.layout === "Board") {
-    content.innerHTML = '<div class="board-grid">' + groups.map(g => '<section class="board-column"' + (display.groupBy === "Status" ? ' data-drop-group="' + esc(g.name) + '"' : '') + '><header><i class="status-dot ' + statusClass(g.name) + '"></i><b>' + esc(g.name) + '</b><span>' + g.issues.length + '</span></header>' + boardGroupContents(g.issues) + '</section>').join("") + '</div>';
+    content.innerHTML = '<div class="board-grid">' + groups.map(g => '<div class="board-lane"' + (display.groupBy === "Status" ? ' data-drop-group="' + esc(g.name) + '"' : '') + '><section class="board-column"><header><i class="status-dot ' + statusClass(g.name) + '"></i><b>' + esc(g.name) + '</b><span>' + g.issues.length + '</span></header>' + boardGroupContents(g.issues) + '</section></div>').join("") + '</div>';
     return;
   }
   content.innerHTML = '<div class="issue-list">' + groups.map(g => {

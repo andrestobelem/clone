@@ -117,3 +117,5 @@ body{min-width:360px}
 .board-card .card-foot>span{flex:0 1 auto;overflow:visible;white-space:normal}
 .board-card .mini-avatar{flex-shrink:0}
 @media(max-width:650px){#issue-properties .property-grid{grid-template-columns:1fr}}
+
+.board-lane{flex:0 0 255px;align-self:stretch;min-width:0}
