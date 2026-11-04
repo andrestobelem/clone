@@ -181,6 +181,7 @@ test('Project update ordering follows timestamps and direction', () => {
   assert.deepEqual(m.run('filterProjects().map(p=>p.id)'),[2,1]);
 });
 
+
 test('Board and list choices leave issue detail without discarding view settings', () => {
   const m = model();
   for (const layout of ['Board','List']) {
@@ -201,4 +202,49 @@ test('Issue properties toggle without replacing an unfinished form', () => {
   m.run('toggleIssueProperties()');
   assert.equal(m.run(`$('#issue-properties').classList.contains('hidden')`),false);
   assert.equal(m.run(`$('#details-toggle').getAttribute('aria-expanded')`),'true');
+});
+
+test('Board cards obey every visible property setting and escape text', () => {
+  const m=model();
+  const record={...issue(1,'Todo','Unstarted'),project:'Project <one>',assignee:'Alex',due_date:'2026-11-10',labels:[{name:'Bug <one>'}]};
+  m.run(`data.issues=${JSON.stringify([record])};display.groupBy='Status';display.properties={Status:false,Priority:false,Assignee:false,Project:false,Label:false,'Due date':false,Updated:false};`);
+  let html=m.run('issueCard(data.issues[0])');
+  assert.ok(!html.includes('card-foot'));
+  assert.ok(html.includes('draggable="true"'));
+  const names={Status:'card-status',Priority:'card-priority',Assignee:'card-assignee',Project:'card-project',Label:'card-labels','Due date':'card-due-date',Updated:'card-updated'};
+  for(const [property, css] of Object.entries(names)) {
+    m.run(`display.properties[${JSON.stringify(property)}]=true;`);
+    html=m.run('issueCard(data.issues[0])');
+    assert.ok(html.includes(`class="${css}"`),property);
+    m.run(`display.properties[${JSON.stringify(property)}]=false;`);
+  }
+  m.run(`display.properties.Project=true;display.properties.Label=true;`);
+  html=m.run('issueCard(data.issues[0])');
+  assert.ok(html.includes('Project &lt;one&gt;'));
+  assert.ok(html.includes('Bug &lt;one&gt;'));
+});
+
+test('Board secondary groups preserve every card and show counts', () => {
+  const m=model();
+  m.run(`data.issues=${JSON.stringify([{...issue(1,'Todo','Unstarted'),assignee:'Alex'},{...issue(2,'Todo','Unstarted'),assignee:'Maya'},{...issue(3,'Todo','Unstarted'),assignee:'Alex'}])};display.groupBy='Status';display.groupBy2='Assignee';`);
+  const html=m.run('boardGroupContents(data.issues)');
+  assert.equal((html.match(/class="board-subgroup"/g)||[]).length,2);
+  assert.ok(html.includes('Alex<span>2</span>'));
+  assert.ok(html.includes('Maya<span>1</span>'));
+  assert.equal((html.match(/data-issue=/g)||[]).length,3);
+  m.run(`display.groupBy2='Status';`);
+  assert.ok(!m.run('boardGroupContents(data.issues)').includes('board-subgroup'));
+});
+
+test('Board accepts drops only when grouped by status and sends the read revision', async () => {
+  const calls=[];
+  const m=model({fetch:async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return {ok:true,json:async()=>({issueId:1})};}});
+  m.run(`data.issues=${JSON.stringify([{...issue(1,'Backlog','Backlog'),revision:7}])};refresh=async()=>{};report=e=>{throw e};void 0;`);
+  const event={target:{closest:()=>({dataset:{dropGroup:'Todo'}})},preventDefault(){},dataTransfer:{getData:()=>'PRO-1'}};
+  await m.event('#content-area','drop',event);
+  assert.deepEqual(calls,[{url:'/api/issues/PRO-1',body:{status:'Todo',ifRevision:7}}]);
+  m.run(`display.groupBy='Priority';`);
+  await m.event('#content-area','drop',event);
+  assert.equal(calls.length,1);
+  assert.ok(m.run('issueCard(data.issues[0])').includes('draggable="false"'));
 });

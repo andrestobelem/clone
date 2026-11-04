@@ -107,6 +107,13 @@ body{min-width:360px}
 .team-name{width:100%;text-align:left}
 @media(max-width:760px){.team-section>.add-team{float:none;margin-top:0}}
 
+/* Board cards use the same property settings as issue rows. */
+.board-card .card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:7px 10px;white-space:normal}
+.board-card .card-foot>span{display:inline-flex;align-items:center;gap:5px;max-width:100%;overflow-wrap:anywhere}
+.board-subgroup{margin:12px 0}
+.board-subgroup>h3{display:flex;justify-content:space-between;gap:8px;margin:0 3px 7px;font-size:10px;font-weight:550;color:#777780}
 #details-toggle[aria-expanded=true]{background:#e8e7f7;color:#6867ad}
 #details-toggle:disabled{opacity:.45;cursor:default}
+.board-card .card-foot>span{flex:0 1 auto;overflow:visible;white-space:normal}
+.board-card .mini-avatar{flex-shrink:0}
 @media(max-width:650px){#issue-properties .property-grid{grid-template-columns:1fr}}

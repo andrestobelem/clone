@@ -225,7 +225,7 @@ function renderIssues() {
   if (!list.length && !(display.showEmptyGroups && display.groupBy === "Status" && statuses().length)) { content.innerHTML = '<div class="empty-state"><div class="empty-illustration"><span>◇</span></div><h2>No issues found</h2><p>Change your filters or create an issue for ' + esc(team().name) + '.</p><button class="primary-button" data-action="new-issue">Create issue</button></div>'; return; }
   const groups = issueGroups(list);
   if (display.layout === "Board") {
-    content.innerHTML = '<div class="board-grid">' + groups.map(g => '<section class="board-column" data-drop-group="' + esc(g.name) + '"><header><i class="status-dot ' + statusClass(g.name) + '"></i><b>' + esc(g.name) + '</b><span>' + g.issues.length + '</span></header>' + g.issues.map(issueCard).join("") + '</section>').join("") + '</div>';
+    content.innerHTML = '<div class="board-grid">' + groups.map(g => '<section class="board-column"' + (display.groupBy === "Status" ? ' data-drop-group="' + esc(g.name) + '"' : '') + '><header><i class="status-dot ' + statusClass(g.name) + '"></i><b>' + esc(g.name) + '</b><span>' + g.issues.length + '</span></header>' + boardGroupContents(g.issues) + '</section>').join("") + '</div>';
     return;
   }
   content.innerHTML = '<div class="issue-list">' + groups.map(g => {
@@ -246,7 +246,23 @@ function issueRow(i) {
   const cols=['70px','minmax(140px,1fr)',...cells.map(()=> 'minmax(72px,auto)')].join(" ");
   return '<div class="issue-row" style="--issue-columns:'+cols+'" data-issue="'+esc(i.identifier)+'" tabindex="0" role="button"><span class="issue-id">'+esc(i.identifier)+'</span><span class="issue-title">'+esc(i.title)+'</span>'+cells.join("")+'</div>';
 }
-function issueCard(i) { return '<button class="board-card" data-issue="' + esc(i.identifier) + '" draggable="true"><span class="issue-id">' + esc(i.identifier) + '</span><strong>' + esc(i.title) + '</strong><span class="card-foot"><i class="priority-mark p' + (priorityIndex(i.priority)+1) + '">' + priorityMark(i.priority) + '</i><span>' + esc(i.project||"") + '</span>' + avatar(i.assignee,i.assignee_color) + '</span></button>'; }
+function boardGroupContents(issues) {
+  const secondary = display.groupBy2 && display.groupBy2 !== "None" && display.groupBy2 !== display.groupBy;
+  if (!secondary) return issues.map(issueCard).join("");
+  return issueGroups(issues, display.groupBy2).map(group => '<section class="board-subgroup"><h3>' + esc(group.name) + '<span>' + group.issues.length + '</span></h3>' + group.issues.map(issueCard).join("") + '</section>').join("");
+}
+function issueCard(i) {
+  const props = Object.assign({Status:true,Priority:true,Assignee:true,Project:false,Label:false,"Due date":false,Updated:true}, display.properties || {});
+  const cells = [];
+  if (props.Status) cells.push('<span class="card-status"><i class="status-dot ' + statusClass(i.status) + '"></i>' + esc(i.status) + '</span>');
+  if (props.Priority) cells.push('<span class="card-priority" title="' + esc(priorityName(i.priority)) + '"><i class="priority-mark p' + (priorityIndex(i.priority)+1) + '">' + priorityMark(i.priority) + '</i>' + esc(priorityName(i.priority)) + '</span>');
+  if (props.Project) cells.push('<span class="card-project">' + esc(i.project || "No project") + '</span>');
+  if (props.Label) cells.push('<span class="card-labels">' + esc(i.labels.map(label => label.name).join(", ") || "No label") + '</span>');
+  if (props["Due date"]) cells.push('<span class="card-due-date">Due · ' + esc(i.due_date || "No date") + '</span>');
+  if (props.Updated) cells.push('<span class="card-updated">Updated · ' + esc(new Date(i.updated_at).toLocaleDateString()) + '</span>');
+  if (props.Assignee) cells.push('<span class="card-assignee">' + avatar(i.assignee,i.assignee_color) + esc(i.assignee || "Unassigned") + '</span>');
+  return '<button class="board-card" data-issue="' + esc(i.identifier) + '" draggable="' + (display.groupBy === "Status") + '"><span class="issue-id">' + esc(i.identifier) + '</span><strong>' + esc(i.title) + '</strong>' + (cells.length ? '<span class="card-foot">' + cells.join("") + '</span>' : '') + '</button>';
+}
 function projectCard(p) {
   const due=projectDue(p);
   return '<button class="project-card" data-project="' + p.id + '"><div class="project-card-top"><span class="project-icon">' + esc(p.icon) + '</span><span class="project-status">◉ ' + esc(p.status) + '</span></div><h3>' + esc(p.name) + '</h3><p>' + esc(p.summary) + '</p><div class="progress-track"><div class="progress-fill" style="width:' + p.progress + '%"></div></div><div class="project-foot"><span>' + p.completed_count + ' / ' + p.issue_count + ' issues</span><span>' + p.progress + '%</span></div><small class="'+due.className+'">' + esc(due.label) + '</small></button>';
@@ -636,7 +652,7 @@ content.addEventListener("blur",async event=>{
   if(target.dataset.projectField){try{const project=data.projects.find(p=>p.id===Number(selectedProject));await api("/api/projects/"+selectedProject,{method:"PATCH",body:withRevision(project,{[target.dataset.projectField]:target.value})});await refresh();}catch(e){report(e);}}
 },{capture:true});
 content.addEventListener("dragstart",event=>{const card=event.target.closest("[data-issue]");if(card){event.dataTransfer.setData("text/plain",card.dataset.issue);}});
-content.addEventListener("dragover",event=>{if(event.target.closest("[data-drop-group]"))event.preventDefault();});
+content.addEventListener("dragover",event=>{if(display.groupBy==="Status"&&event.target.closest("[data-drop-group]"))event.preventDefault();});
 content.addEventListener("drop",async event=>{const column=event.target.closest("[data-drop-group]");if(!column)return;event.preventDefault();const identifier=event.dataTransfer.getData("text/plain");const status=column.dataset.dropGroup;if(GROUPS.includes(display.groupBy)&&display.groupBy!=="Status")return;try{const issue=data.issues.find(i=>i.identifier===identifier);await api("/api/issues/"+identifier,{method:"PATCH",body:withRevision(issue,{status})});await refresh();}catch(e){report(e);}});
 modalLayer.addEventListener("click",event=>{if(event.target===modalLayer)closeModal();});
 commandLayer.addEventListener("click",event=>{if(event.target===commandLayer)closeSearch();});
