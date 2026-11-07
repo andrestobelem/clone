@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#efeff1">
+    <meta name="description" content="Clone is a local issue and project workspace. One command, one SQLite database, no hosted account.">
+    <meta property="og:title" content="Clone — Project work, local by default">
+    <meta property="og:description" content="Issues, projects, planning, and automation in a local workspace you control.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://clone.andrestobelem.dev">
+    <meta property="og:image" content="https://clone.andrestobelem.dev/social-preview.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:alt" content="Clone local issue and project workspace preview">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Clone — Project work, local by default">
+    <meta name="twitter:description" content="Issues, projects, planning, and automation in a local workspace you control.">
+    <meta name="twitter:image" content="https://clone.andrestobelem.dev/social-preview.jpg">
+    <link rel="canonical" href="https://clone.andrestobelem.dev">
+    <title>Clone — Project work, local by default</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%237778d9'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Arial,sans-serif' font-size='30' font-weight='700' fill='white'%3EC%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="local.css">
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Clone home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>Clone</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="#inside">Inside</a>
+        <a href="#agents">Agents</a>
+        <a href="#principles">Principles</a>
+        <a href="https://github.com/andrestobelem/clone">GitHub</a>
+      </nav>
+      <a class="header-cta" href="https://github.com/andrestobelem/clone">View source <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><span></span> Local issue &amp; project workspace</p>
+          <h1>Project work,<br><em>local by default.</em></h1>
+          <p class="lede">Clone keeps issues, projects, planning, and automation on your computer. Your records stay in SQLite. No hosted account required.</p>
+          <div class="command-modes" role="group" aria-label="Data location">
+            <button class="command-mode active" type="button" data-mode="global" aria-pressed="true">Global</button>
+            <button class="command-mode" type="button" data-mode="local" aria-pressed="false">Per repository</button>
+          </div>
+          <div class="command-wrap" aria-label="Install command">
+            <div>
+              <span class="command-label" id="command-label">Use one workspace from any folder</span>
+              <code id="command-value">npx @andrestobelem/clone@0.4.0</code>
+            </div>
+            <button class="copy-button" type="button" data-copy="npx @andrestobelem/clone@0.4.0" aria-label="Copy npx command">
+              <span>Copy</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            </button>
+          </div>
+          <p class="local-note" id="command-note"><span>Stores data in your user directory</span><span>Available from any folder</span></p>
+          <div class="hero-actions">
+            <a class="primary-button" href="https://www.npmjs.com/package/@andrestobelem/clone">View on npm <span aria-hidden="true">→</span></a>
+            <span class="platforms">macOS · Linux · Windows</span>
+          </div>
+        </div>
+
+        <div class="product-stage reveal" aria-label="Clone interface preview">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="app-window">
+            <div class="window-bar">
+              <span class="light red"></span><span class="light yellow"></span><span class="light green"></span>
+              <span class="window-title">Clone</span>
+            </div>
+            <div class="app-body">
+              <aside class="app-sidebar">
+                <div class="workspace-chip"><b>C</b><span>Clone</span></div>
+                <ul>
+                  <li><span>⌂</span> Home</li>
+                  <li class="active"><span>◫</span> Issues <b>12</b></li>
+                  <li><span>◇</span> Projects</li>
+                  <li><span>◎</span> Views</li>
+                </ul>
+                <p>YOUR TEAMS</p>
+                <ul><li><span class="team-dot"></span> Product</li></ul>
+              </aside>
+              <div class="app-content">
+                <div class="content-head"><div><small>Product</small><h2>Issues</h2></div><button>＋ New issue</button></div>
+                <div class="filter-row"><span class="selected">All issues</span><span>Active</span><span>Backlog</span><i></i><span>Filter</span></div>
+                <div class="issue-group"><p><span class="status-ring progress"></span> In progress <b>3</b></p>
+                  <div class="issue"><small>PRO-18</small><strong>Package the desktop release</strong><span class="priority high">◆</span><span class="avatar blue">AM</span></div>
+                  <div class="issue"><small>PRO-22</small><strong>Polish responsive navigation</strong><span class="priority medium">◆</span><span class="avatar purple">JM</span></div>
+                </div>
+                <div class="issue-group"><p><span class="status-ring"></span> Todo <b>4</b></p>
+                  <div class="issue"><small>PRO-27</small><strong>Publish the first release</strong><span class="priority low">◆</span><span class="avatar coral">SK</span></div>
+                  <div class="issue"><small>PRO-31</small><strong>Write the migration guide</strong><span class="priority medium">◆</span><span class="avatar blue">AM</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="local-card"><span class="pulse"></span><div><b>Local and running</b><small>127.0.0.1:4173</small></div></div>
+        </div>
+      </section>
+
+      <section class="ticker" aria-label="Product capabilities">
+        <div><span>Issues</span><i>✦</i><span>Projects</span><i>✦</i><span>Cycles</span><i>✦</i><span>Views</span><i>✦</i><span>Automation</span><i>✦</i><span>Snapshots</span></div>
+      </section>
+
+      <section class="inside section" id="inside">
+        <div class="section-intro reveal">
+          <p class="eyebrow"><span></span> What is inside</p>
+          <h2>The planning surface,<br>without the platform overhead.</h2>
+          <p>Clone brings the parts of a modern issue tracker that matter for focused work into one local process.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature feature-wide reveal">
+            <div class="feature-number">01</div>
+            <div>
+              <h3>Plan the work</h3>
+              <p>Shape issues with workflow statuses, priorities, labels, assignments, relations, sub-issues, comments, and attachments.</p>
+            </div>
+            <div class="mini-board" aria-hidden="true">
+              <div><small>BACKLOG</small><span>Research local backup flow</span><span>Define project milestones</span></div>
+              <div><small>IN PROGRESS</small><span class="accent">Package the desktop release</span><span>Polish empty states</span></div>
+              <div><small>DONE</small><span>Extract domain modules</span><span>Ship keyboard navigation</span></div>
+            </div>
+          </article>
+          <article class="feature reveal">
+            <div class="feature-number">02</div>
+            <div class="feature-icon calendar" aria-hidden="true"><b>31</b><span>OCT</span></div>
+            <h3>See the horizon</h3>
+            <p>Coordinate projects, milestones, dependencies, cycles, progress, and updates without leaving the workspace.</p>
+          </article>
+          <article class="feature dark reveal">
+            <div class="feature-number">03</div>
+            <div class="terminal" aria-hidden="true"><span>$ clone issues create</span><span class="terminal-output">PRO-42 created</span><i></i></div>
+            <h3>Built for agents too</h3>
+            <p>The browser and CLI use the same actions. People and external agents keep distinct actor identities and history.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="agent-setup section" id="agents">
+        <div class="section-intro reveal">
+          <p class="eyebrow"><span></span> Agent skill</p>
+          <h2>Teach Codex and Claude<br>how Clone works.</h2>
+          <p>Install one shared skill in the repository where your agents work. It gives each agent a stable identity and a verified workflow for reading and changing workspace records.</p>
+        </div>
+        <div class="agent-steps">
+          <article class="agent-step reveal">
+            <span class="agent-step-number">01</span>
+            <h3>Start Clone</h3>
+            <p>Use the global workspace by default. Add <code>--local</code> when the repository needs its own workspace.</p>
+            <code class="agent-command">npx @andrestobelem/clone@0.4.0</code>
+          </article>
+          <article class="agent-step reveal">
+            <span class="agent-step-number">02</span>
+            <h3>Install the skill</h3>
+            <p>The installer configures the same skill for Codex and Claude Code.</p>
+            <div class="agent-command-wrap"><code class="agent-command">npx skills add andrestobelem/clone --skill clone-workspace --agent codex claude-code -y</code><button class="agent-copy" type="button" data-copy="npx skills add andrestobelem/clone --skill clone-workspace --agent codex claude-code -y"><span>Copy</span></button></div>
+          </article>
+          <article class="agent-step reveal">
+            <span class="agent-step-number">03</span>
+            <h3>Ask the agent</h3>
+            <p>The agent checks the workspace, selects its actor identity, reads the current revision, performs the action, and verifies the result.</p>
+            <blockquote>“Use Clone to create an issue for the login error.”</blockquote>
+          </article>
+        </div>
+        <div class="agent-docs reveal">
+          <div>
+            <p class="agent-docs-label">What gets installed</p>
+            <h3>One skill, two agent paths.</h3>
+            <p>Codex discovers <code>.agents/skills/clone-workspace</code>. Claude Code discovers <code>.claude/skills/clone-workspace</code>. The installer also writes <code>skills-lock.json</code> so the project can update the skill later.</p>
+            <pre><code>your-project/
+├── .agents/skills/clone-workspace/
+├── .claude/skills/clone-workspace/
+└── skills-lock.json</code></pre>
+          </div>
+          <div>
+            <p class="agent-docs-label">What the skill does</p>
+            <h3>A verified operating contract.</h3>
+            <ol>
+              <li>Selects global storage or the repository's <code>.clone/</code> directory.</li>
+              <li>Registers a stable <code>codex</code> or <code>claude</code> actor.</li>
+              <li>Checks workspace health with <code>doctor</code>.</li>
+              <li>Reads records and their revisions before each change.</li>
+              <li>Uses cursor pagination and atomic batch operations.</li>
+              <li>Checks the saved result and synchronization state.</li>
+              <li>Recovers conflicts without losing another agent's work.</li>
+            </ol>
+            <p>Invoke it explicitly with <code>$clone-workspace</code>, or ask the agent to use Clone. Update it with <code>npx skills update clone-workspace</code>.</p>
+            <div class="agent-docs-links"><a class="primary-button" href="https://github.com/andrestobelem/clone/blob/main/.agents/skills/clone-workspace/SKILL.md">Read the skill <span aria-hidden="true">↗</span></a><a href="https://github.com/andrestobelem/clone#install-the-agent-skill">Full documentation <span aria-hidden="true">↗</span></a></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="principles section" id="principles">
+        <div class="principle-heading reveal">
+          <p class="eyebrow light"><span></span> The local contract</p>
+          <h2>You own the work.<br>Clone holds the shape.</h2>
+        </div>
+        <div class="principle-list">
+          <article class="reveal"><span>01</span><h3>One process</h3><p>The browser UI, CLI, and scheduler use the same TypeScript actions and local records.</p></article>
+          <article class="reveal"><span>02</span><h3>One workspace per repository</h3><p>Run Clone with <code>--local</code>. SQLite, snapshots, attachments, and backups stay in that repository's <code>.clone/</code> directory.</p></article>
+          <article class="reveal"><span>03</span><h3>Complete snapshots</h3><p>Stable JSON snapshots make records reviewable, portable, and compatible with Git.</p></article>
+          <article class="reveal"><span>04</span><h3>Loopback only</h3><p>The server binds to 127.0.0.1 by default. Clone is personal software, not a hosted collaboration service.</p></article>
+        </div>
+      </section>
+
+      <section class="final-cta section reveal">
+        <div>
+          <p class="eyebrow"><span></span> Open source · MIT</p>
+          <h2>Keep the plan<br>close to the work.</h2>
+        </div>
+        <div class="cta-panel">
+          <p>Clone is available as a public npm package. Run version <code>0.4.0</code> with npx and <code>--local</code> to create an independent workspace inside the current repository.</p>
+          <a class="primary-button" href="https://www.npmjs.com/package/@andrestobelem/clone">Open the npm package <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">C</span><span>Clone</span></a>
+      <p>Local issue and project workspace.</p>
+      <div><a href="https://github.com/andrestobelem/clone">GitHub</a><a href="https://github.com/andrestobelem/clone/blob/main/LICENSE">MIT License</a></div>
+    </footer>
+  </body>
+</html>

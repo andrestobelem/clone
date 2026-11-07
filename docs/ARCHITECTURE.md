@@ -7,6 +7,7 @@ The application runs in one local process or several cooperating local processes
 | Component | Responsibility |
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | UI shell, rendering, forms, navigation, and HTTP requests |
+| `website/` | Public product page, social preview image, and Firebase Hosting configuration |
 | `src/server.ts` | Static UI files, JSON routes, attachment downloads, and recurring scheduler |
 | `src/cli.ts` | Command parser, discovery catalog, queries, payload flags, and output/error handling |
 | `src/workspace.ts` | Stable facade for workspace operations |
@@ -97,4 +98,4 @@ The default bind address is `127.0.0.1`. `CLONE_HOST` can change it, but the app
 
 ## Distribution
 
-The root npm package contains the compiled TypeScript runtime and static UI. It does not download a platform executable. `npx @andrestobelem/clone@0.3.1` runs the package executable. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory.
+The root npm package contains the compiled TypeScript runtime and static UI. It does not download a platform executable. `npx @andrestobelem/clone@0.4.0` runs the package executable. `--local` selects `./.clone/`, and `--data-dir` selects an explicit directory.

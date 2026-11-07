@@ -21,3 +21,4 @@ npm-debug.log*
 *.tgz
 .playwright-cli/
 output/playwright/
+.firebase/

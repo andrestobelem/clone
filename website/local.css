@@ -1,0 +1,229 @@
+.command-modes {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.command-mode {
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.command-mode:hover,
+.command-mode.active {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: var(--white);
+}
+
+.local-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+  max-width: 565px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font: 500 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.01em;
+}
+
+.local-note span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.local-note span:not(:last-child)::after {
+  width: 3px;
+  height: 3px;
+  margin-left: 13px;
+  border-radius: 50%;
+  background: var(--blue);
+  content: "";
+}
+
+.local-note code {
+  color: var(--ink);
+  font: inherit;
+}
+
+.agent-setup {
+  background: var(--panel);
+}
+
+.agent-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.agent-step {
+  min-height: 315px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-step-number {
+  color: var(--blue);
+  font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.agent-step h3 {
+  margin: 50px 0 12px;
+  font-size: 25px;
+  letter-spacing: -0.04em;
+}
+
+.agent-step p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.agent-command,
+.agent-step blockquote {
+  margin: auto 0 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--white);
+  color: var(--ink);
+  font: 500 11px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.agent-command-wrap {
+  margin-top: auto;
+  position: relative;
+}
+
+.agent-command-wrap .agent-command {
+  display: block;
+  margin: 0;
+  padding-right: 62px;
+}
+
+.agent-copy {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.agent-copy.copied {
+  background: var(--blue);
+}
+
+.agent-docs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 70px;
+  margin-top: 72px;
+  padding-top: 70px;
+  border-top: 1px solid var(--line);
+}
+
+.agent-docs-label {
+  margin-bottom: 12px;
+  color: var(--blue);
+  font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-docs h3 {
+  margin-bottom: 16px;
+  font-size: 27px;
+  letter-spacing: -0.04em;
+}
+
+.agent-docs p,
+.agent-docs li {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.agent-docs code {
+  color: var(--ink);
+  font-size: 0.9em;
+  white-space: normal;
+}
+
+.agent-docs pre {
+  margin: 26px 0 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  overflow: auto;
+}
+
+.agent-docs pre code {
+  font: 500 12px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre;
+}
+
+.agent-docs ol {
+  margin: 0 0 24px;
+  padding-left: 20px;
+}
+
+.agent-docs-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 26px;
+}
+
+.agent-docs-links > a:last-child {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .local-note {
+    display: grid;
+    gap: 5px;
+  }
+
+  .local-note span:not(:last-child)::after {
+    display: none;
+  }
+
+  .agent-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-step {
+    min-height: 280px;
+  }
+
+  .agent-docs {
+    grid-template-columns: 1fr;
+    gap: 45px;
+    margin-top: 55px;
+    padding-top: 55px;
+  }
+
+  .agent-docs-links {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
