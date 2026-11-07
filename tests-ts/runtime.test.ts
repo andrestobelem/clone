@@ -419,7 +419,7 @@ describe("CLI contract", () => {
         formatVersion: 1,
         cliVersion: expect.any(String),
         storageMode,
-        actorSelection: { actorId: 1, source: "legacy-default" },
+        actorSelection: null,
         database: expectedDatabase,
         dataDirectory: path.dirname(expectedDatabase),
         snapshotDirectory: syncDirectory,
@@ -503,7 +503,7 @@ describe("CLI contract", () => {
     });
   });
 
-  it("warns when a mutation uses the temporary actor fallback", () => {
+  it("requires an explicit actor for mutations", () => {
     const root = temporaryDirectory();
     const database = path.join(root, "workspace.sqlite3");
     const snapshot = path.join(root, "snapshot");
@@ -529,8 +529,11 @@ describe("CLI contract", () => {
       "Fallback",
       "--json",
     ]);
-    expect(result.status).toBe(0);
-    expect(result.stderr).toContain("temporary fallback");
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      code: "invalid_input",
+      message: "Select an actor with --actor, CLONE_ACTOR_ID, or actorId",
+    });
   });
 
   it.each([
@@ -757,6 +760,8 @@ describe("CLI contract", () => {
       snapshot,
       "agents",
       "create",
+      "--actor",
+      "1",
       "--key",
       "contract",
       "--name",

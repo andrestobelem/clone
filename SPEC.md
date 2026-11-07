@@ -12,7 +12,7 @@ Use the [glossary](GLOSSARY.md) for product terms. Implementation and storage co
 - Actors can receive issues, lead projects, participate in teams and projects, subscribe to issues, and own saved views. Authors and activity records use actors.
 - Unknown or inactive actors cannot perform new writes or receive new assignments. Deactivation preserves history and existing relationships. An existing inactive participant can remain in an unchanged relationship.
 - The web UI uses actor 1. The CLI and API can select another actor. Actor selection does not authenticate a process or enforce roles.
-- A CLI mutation resolves its actor from an explicit option, the `CLONE_ACTOR_ID` environment variable, or its payload. Clone 0.3 warns before it uses the legacy actor 1 fallback. Clone 0.4 removes that fallback.
+- A CLI mutation resolves its actor from an explicit option, the `CLONE_ACTOR_ID` environment variable, or its payload. A mutation without a selected actor is rejected before storage is changed.
 - Human rosters are read-only. Member creation and invitations are not provided.
 
 ## Issues and workflow

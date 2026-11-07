@@ -9,7 +9,7 @@ Website: <https://clone.andrestobelem.dev>
 Node.js 24.15 or later is the only requirement.
 
 ```sh
-npx @andrestobelem/clone@0.3.1
+npx @andrestobelem/clone@0.4.0
 ```
 
 The command downloads the npm package, creates an empty workspace on the first run, starts Clone on `127.0.0.1`, and opens the browser. Stop it with Ctrl+C. Later runs use the same records from the operating system's user data directory.
@@ -17,7 +17,7 @@ The command downloads the npm package, creates an empty workspace on the first r
 Use another port or keep the browser closed when needed:
 
 ```sh
-npx @andrestobelem/clone@0.3.1 start --port 5000 --no-open
+npx @andrestobelem/clone@0.4.0 start --port 5000 --no-open
 ```
 
 ### Use one workspace per repository
@@ -25,7 +25,7 @@ npx @andrestobelem/clone@0.3.1 start --port 5000 --no-open
 Open a terminal in the repository that the workspace belongs to. Then run:
 
 ```sh
-npx @andrestobelem/clone@0.3.1 --local
+npx @andrestobelem/clone@0.4.0 --local
 ```
 
 With `--local`, the current directory determines where Clone stores data. Clone creates `.clone/` there and stores `workspace.sqlite3`, snapshots, attachments, and backups inside it. Running the same command from another repository creates a separate workspace.
@@ -41,8 +41,8 @@ Always run the command from the same repository to reopen that workspace. `--loc
 Use only one storage selector. Clone rejects combinations of `--local`, `--data-dir`, and `--db`. Inspect the resolved storage before an operation when needed:
 
 ```sh
-npx @andrestobelem/clone@0.3.1 --local context --json
-npx @andrestobelem/clone@0.3.1 --local doctor --json
+npx @andrestobelem/clone@0.4.0 --local context --json
+npx @andrestobelem/clone@0.4.0 --local doctor --json
 ```
 
 The npm package is scoped because the unscoped `clone` name belongs to another package. The installed executable is still named `clone`.
@@ -50,7 +50,7 @@ The npm package is scoped because the unscoped `clone` name belongs to another p
 For repeated agent operations, install the same version in the target repository and bypass npm package resolution:
 
 ```sh
-npm install --save-dev @andrestobelem/clone@0.3.1
+npm install --save-dev @andrestobelem/clone@0.4.0
 npx --no-install clone --local doctor --json
 ```
 
@@ -67,8 +67,8 @@ The installer creates `.agents/skills/clone-workspace` for Codex, `.claude/skill
 Start Clone with global storage or repository-local storage:
 
 ```sh
-npx @andrestobelem/clone@0.3.1
-npx @andrestobelem/clone@0.3.1 --local
+npx @andrestobelem/clone@0.4.0
+npx @andrestobelem/clone@0.4.0 --local
 ```
 
 Then ask the agent to use Clone:
@@ -168,13 +168,13 @@ The application has one local workspace. It does not provide hosted collaboratio
 ## CLI and agent access
 
 ```sh
-npx @andrestobelem/clone@0.3.1 --help
-npx @andrestobelem/clone@0.3.1 context --json
-npx @andrestobelem/clone@0.3.1 doctor --json
-npx @andrestobelem/clone@0.3.1 describe
-npx @andrestobelem/clone@0.3.1 describe issues comment --json
-npx @andrestobelem/clone@0.3.1 teams list --json
-npx @andrestobelem/clone@0.3.1 agents list --all --json
+npx @andrestobelem/clone@0.4.0 --help
+npx @andrestobelem/clone@0.4.0 context --json
+npx @andrestobelem/clone@0.4.0 doctor --json
+npx @andrestobelem/clone@0.4.0 describe
+npx @andrestobelem/clone@0.4.0 describe issues comment --json
+npx @andrestobelem/clone@0.4.0 teams list --json
+npx @andrestobelem/clone@0.4.0 agents list --all --json
 ```
 
 Register each external agent once with a stable key. Use its returned actor ID on writes. Follow the [Agent CLI guide](docs/AGENTS.md) for registration and recovery. See the [CLI reference](docs/CLI.md) for commands, payloads, and the Git workflow.

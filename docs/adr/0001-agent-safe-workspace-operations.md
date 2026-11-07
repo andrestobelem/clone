@@ -1,6 +1,6 @@
 # Use revisions and atomic batches for agent work
 
-Clone will identify each workspace with a persistent Workspace ID, protect mutable records with numeric Record revisions, and execute a Batch as one database transaction and one snapshot publication. Numeric revisions give every interface the same explicit stale-write check. Atomic batches remove repeated process and snapshot costs without adding a second mutation contract. Clone 0.3 warns when a CLI mutation falls back to actor 1; Clone 0.4 will require an actor selected by input or environment.
+Clone identifies each workspace with a persistent Workspace ID, protects mutable records with numeric Record revisions, and executes a Batch as one database transaction and one snapshot publication. Numeric revisions give every interface the same explicit stale-write check. Atomic batches remove repeated process and snapshot costs without adding a second mutation contract. Clone 0.4 requires each CLI mutation to select an actor by input or environment. Read commands can run without an actor.
 
 ## Consequences
 

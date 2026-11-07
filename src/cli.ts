@@ -77,6 +77,7 @@ export async function main(argv: string[]): Promise<number> {
     }
     const paths = resolvePaths(parsed);
     if (parsed.command === "start" || parsed.command === "serve") {
+      warnAboutUnselectedLocalWorkspace(parsed, paths);
       await startServer(
         paths,
         parsePort(parsed),
@@ -101,6 +102,24 @@ export async function main(argv: string[]): Promise<number> {
     else console.error(converted.message);
     return converted.exitCode;
   }
+}
+
+function warnAboutUnselectedLocalWorkspace(
+  parsed: Parsed,
+  paths: ReturnType<typeof storagePaths>,
+): void {
+  if (
+    parsed.options.local ||
+    parsed.options.dataDir !== undefined ||
+    parsed.options.db !== undefined ||
+    fs.existsSync(paths.database)
+  )
+    return;
+  const localDatabase = path.join(process.cwd(), ".clone", "workspace.sqlite3");
+  if (fs.existsSync(localDatabase))
+    console.error(
+      `Warning: the selected global workspace is empty. A local workspace exists at ${localDatabase}. Use --local to open it.`,
+    );
 }
 
 async function execute(
@@ -149,7 +168,7 @@ async function execute(
   const action = actions[parsed.command]?.[parsed.verb ?? ""];
   if (!action) throw new InvalidInputError("Unknown command");
   const payload = readPayload(parsed);
-  const actor = resolveActor(parsed, payload, true).actorId;
+  const actor = requireSelectedActor(parsed, payload).actorId;
   payload.actorId = actor;
   let route = action.route
     .replace("{id}", parsed.positionals[0] ?? "")
@@ -239,7 +258,7 @@ function executeBatch(
   paths: ReturnType<typeof storagePaths>,
 ): unknown {
   const input = readPayload(parsed);
-  const actor = resolveActor(parsed, input, true).actorId;
+  const actor = requireSelectedActor(parsed, input).actorId;
   const unknown = Object.keys(input).filter(
     (key) => !["actorId", "operations"].includes(key),
   );
@@ -719,7 +738,7 @@ function storageContext(parsed: Parsed) {
     formatVersion: 1,
     cliVersion: packageVersion,
     storageMode,
-    actorSelection: resolveActor(parsed, {}, false),
+    actorSelection: selectedActor(parsed, {}),
     database: paths.database,
     dataDirectory: paths.dataDirectory,
     snapshotDirectory: paths.snapshotDirectory,
@@ -730,7 +749,7 @@ function storageContext(parsed: Parsed) {
 
 function doctor(parsed: Parsed): Record<string, unknown> {
   const paths = resolvePaths(parsed);
-  const actorSelection = resolveActor(parsed, {}, false);
+  const actorSelection = selectedActor(parsed, {});
   if (!fs.existsSync(paths.database))
     return {
       formatVersion: 1,
@@ -764,15 +783,19 @@ function doctor(parsed: Parsed): Record<string, unknown> {
           : "SELECT NULL AS workspace_id,name FROM workspace LIMIT 1",
       )
       .get() as { workspace_id?: string; name?: string } | undefined;
-    const actor = database
-      .prepare("SELECT id,kind,name,active FROM actors WHERE id=?")
-      .get(actorSelection.actorId) as Row | undefined;
+    const actor = actorSelection
+      ? (database
+          .prepare("SELECT id,kind,name,active FROM actors WHERE id=?")
+          .get(actorSelection.actorId) as Row | undefined)
+      : undefined;
     const synchronization = syncStatus(paths);
     let snapshotFormatVersion: number | null = null;
     if (fs.existsSync(path.join(paths.snapshotDirectory, "manifest.json")))
       snapshotFormatVersion = Number(validateSnapshot(paths).formatVersion);
     const migrationRequired = version < 3;
-    const actorReady = Boolean(actor && Number(actor.active));
+    const actorReady = actorSelection
+      ? Boolean(actor && Number(actor.active))
+      : true;
     const clean =
       !synchronization.files_changed &&
       !synchronization.database_changed &&
@@ -786,11 +809,13 @@ function doctor(parsed: Parsed): Record<string, unknown> {
       workspace: workspace
         ? { id: workspace.workspace_id ?? null, name: workspace.name }
         : null,
-      actorSelection: {
-        ...actorSelection,
-        exists: Boolean(actor),
-        active: actorReady,
-      },
+      actorSelection: actorSelection
+        ? {
+            ...actorSelection,
+            exists: Boolean(actor),
+            active: actorReady,
+          }
+        : null,
       synchronization,
       compatibility: {
         supported: version <= 3,
@@ -805,7 +830,13 @@ function doctor(parsed: Parsed): Record<string, unknown> {
         },
         {
           name: "actor",
-          status: actorReady ? "ok" : actor ? "inactive" : "missing",
+          status: !actorSelection
+            ? "not_selected"
+            : actorReady
+              ? "ok"
+              : actor
+                ? "inactive"
+                : "missing",
         },
         {
           name: "synchronization",
@@ -822,14 +853,15 @@ function doctor(parsed: Parsed): Record<string, unknown> {
   }
 }
 
-function resolveActor(
+type ActorSelection = {
+  actorId: number;
+  source: "flag" | "environment" | "payload";
+};
+
+function selectedActor(
   parsed: Parsed,
   payload: JsonObject,
-  warnOnLegacy: boolean,
-): {
-  actorId: number;
-  source: "flag" | "environment" | "payload" | "legacy-default";
-} {
+): ActorSelection | null {
   const candidates = [
     parsed.options.actor !== undefined
       ? { source: "flag" as const, actorId: numberOption(parsed.options.actor) }
@@ -846,13 +878,19 @@ function resolveActor(
   ].filter((value): value is NonNullable<typeof value> => value !== null);
   if (new Set(candidates.map(({ actorId }) => actorId)).size > 1)
     throw new InvalidInputError("Actor selectors must identify the same actor");
-  const selected = candidates[0];
-  if (selected) return selected;
-  if (warnOnLegacy)
-    console.error(
-      "Warning: actor 1 is a temporary fallback. Use --actor or CLONE_ACTOR_ID. Clone 0.4 will require an actor.",
+  return candidates[0] ?? null;
+}
+
+function requireSelectedActor(
+  parsed: Parsed,
+  payload: JsonObject,
+): ActorSelection {
+  const selection = selectedActor(parsed, payload);
+  if (!selection)
+    throw new InvalidInputError(
+      "Select an actor with --actor, CLONE_ACTOR_ID, or actorId",
     );
-  return { actorId: 1, source: "legacy-default" };
+  return selection;
 }
 function resolveDatabasePath(parsed: Parsed): string {
   let directory: string;
@@ -925,9 +963,9 @@ function describe(pathPrefix: readonly string[], resolvedDatabase: string) {
       ["--actor"],
       "integer",
       false,
-      1,
       undefined,
-      "Actor ID (default: 1)",
+      undefined,
+      "Actor ID. Required for mutations",
     ),
     argument(
       "json",
