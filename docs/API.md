@@ -151,3 +151,14 @@ Each rule runs one action. `action.assignTo` selects an active actor ID and take
 Some missing mutation records return 400, consistent with shared CLI actions. Some idempotent Inbox and resource actions succeed when no record matches. Read-route errors and mutation errors do not have the CLI's structured error codes.
 
 For a committed error, do not repeat the mutation. Use `sync status` or `sync export` through the CLI to recover publication. For a synchronization conflict, inspect both database and snapshot state before import or export. See [recovery instructions](CLI.md#file-format-and-recovery).
+
+## Related issue summaries
+
+Issue details, bootstrap and mutation responses use the same sub-issue and relation summaries. The CLI `issues show` uses this contract too. These fields are additive; existing fields keep their meaning.
+
+- `subissues`: `id`, `identifier`, `title`, `status_id`, `status`, `status_category`, `status_color`, `revision`, `assignee_id`, `assignee`, `assignee_kind`. Order: issue number, then ID. Archived sub-issues are excluded.
+- `relations`: existing `id`, `relation_type`, `url`, `related_identifier`, `related_title`, plus `related_id`, `related_status_id`, `related_status`, `related_status_category`, `related_status_color`, `related_revision`, `related_archived`, `related_assignee_id`, `related_assignee`, `related_assignee_kind`. Order: relation ID. Linked archived issues remain visible. External references have null related issue fields.
+
+An unassigned issue has null assignee fields. Agent names use the existing ` (Agent)` suffix. Summaries do not include descriptions, comments or activity. Read again before a mutation; use the current revision and handle conflicts. A relation status does not automatically change the parent status or prohibit a mutation.
+
+Constitutional check for this extension: 1 Pass, records stay local; 2 Pass, no hosted service is required; 3 Pass, all interfaces share issue composition; 4 Pass, actor attribution is unchanged; 5 Pass, reads do not change data and revisions remain explicit; 6 Pass, snapshot format is unchanged; 7 Pass, summaries support local issue planning; 8 Pass, existing glossary terms are used.

@@ -25,6 +25,7 @@ Issues have a team, identifier, title, workflow status, and priority. Optional f
 - A project can contain an issue only when it links to the issue's team. A selected cycle must belong to that team. A selected milestone must belong to the issue's project. Parent links must not form a cycle.
 - A move or project change must clear or replace incompatible relationships in the same action. Older records are preserved on reads; changing a cycle or milestone relationship validates it.
 - Labels, subscribers, comments, relations, attachments, and sub-issues appear in issue details. Changes to labels and subscribers record activity and run update automations.
+- Sub-issue summaries include current workflow status, category, color, Record revision and assignee. Issue relation summaries include the same fields with a `related_` prefix and the related issue archive flag. External URL relations have null issue fields. Sub-issues use issue number and ID order; relations use relation ID order. Archived sub-issues stay hidden; linked archived issues remain visible.
 - Issue details include append-only Work evidence for commits, tests, and artifacts.
 - Archive hides an issue from normal lists and search. Restore makes it available again. Comments and history remain stored.
 - Attachments must total no more than 3,000,000 bytes per upload. Empty files are rejected. Downloads use local attachment IDs.

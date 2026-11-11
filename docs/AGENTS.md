@@ -62,3 +62,7 @@ Use `--json` to receive a JSON error on stderr. Check the exit code before parsi
 Do not use `--force` as automatic recovery. Import replaces the complete database; it is not a merge. If recovery reports changed snapshot files, restore the input required by the error before recovery. Do not edit SQLite or snapshot records to perform normal workspace actions. Do not remove recovery files or reset storage to bypass a conflict.
 
 See [CLI reference](CLI.md) for backups, format details, and command options. See [HTTP API](API.md) for shared payload fields and [architecture](ARCHITECTURE.md) for the write and recovery flow.
+
+## Review child work and dependencies
+
+Read the parent with `issues show IDENTIFIER --json`. Use `subissues` for each child's current workflow status, revision and assignee. Use `relations` and its `related_` fields for dependency status, revision, assignee and archive state. An external URL has null related issue fields. Read full issues only when their description or history is needed. Status summaries do not enforce dependency completion. Read current revisions before a Batch and verify the results after it.

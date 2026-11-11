@@ -201,3 +201,9 @@ npx @andrestobelem/clone@0.4.0 issues update PRO-248 --actor 1 --if-revision 1 -
 ```
 
 Use `[]` to clear list relationships. A label or subscriber update records activity and runs issue update automations. `attachments get --output` must point outside the database storage directory and the snapshot directory; it cannot replace recovery files, backups, or SQLite files.
+
+## Child work and dependency summaries
+
+`issues show IDENTIFIER --json` includes compact `subissues` and `relations`. Sub-issues include current `status`, `status_category`, `status_color`, `revision` and assignee fields. Relations use the same names with a `related_` prefix, plus `related_id` and `related_archived`. Existing identifier and title fields remain available. External URL relations have null related issue fields. See [the response contract](API.md#related-issue-summaries).
+
+Use these summaries to review progress without reading each issue's full history. A summary is current at read time; later writes still require revision checks. Clone does not automatically close a parent or enforce dependency status.

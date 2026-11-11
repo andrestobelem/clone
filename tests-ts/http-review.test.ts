@@ -2,7 +2,7 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { once } from "node:events";
-import { spawn, type ChildProcess } from "node:child_process";
+import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { initialize, mutate } from "../src/sync.js";
 import { storagePaths } from "../src/paths.js";
@@ -66,6 +66,82 @@ describe("HTTP input and revision regressions", () => {
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(10_000),
     });
+
+  it("shares current sub-issue and dependency summaries with the CLI and bootstrap", async () => {
+    const created = (await (
+      await send("/api/issues", "POST", {
+        actorId: 1,
+        teamId: 1,
+        title: "Summary parent",
+      })
+    ).json()) as { issue: { id: number; identifier: string } };
+    const child = (await (
+      await send("/api/issues", "POST", {
+        actorId: 1,
+        teamId: 1,
+        title: "Summary child",
+        parentId: created.issue.id,
+        status: "Todo",
+        assigneeId: 1,
+      })
+    ).json()) as {
+      issue: { id: number; identifier: string; revision: number };
+    };
+    expect(
+      (
+        await send(
+          `/api/issues/${created.issue.identifier}/relations`,
+          "POST",
+          {
+            actorId: 1,
+            relatedIssueId: child.issue.identifier,
+            type: "blocked by",
+          },
+        )
+      ).status,
+    ).toBe(201);
+    const detail = (await (
+      await fetch(`${baseUrl}/api/issues/${created.issue.identifier}`)
+    ).json()) as { subissues: unknown[]; relations: unknown[] };
+    expect(detail.subissues).toEqual([
+      expect.objectContaining({
+        status: "Todo",
+        revision: child.issue.revision,
+        assignee_id: 1,
+        assignee: expect.any(String),
+      }),
+    ]);
+    expect(detail.relations).toEqual([
+      expect.objectContaining({
+        related_status: "Todo",
+        related_revision: child.issue.revision,
+        related_assignee_id: 1,
+      }),
+    ]);
+    const fromCli = JSON.parse(
+      execFileSync(
+        process.execPath,
+        [
+          "bin/clone.js",
+          "--db",
+          paths.database,
+          "issues",
+          "show",
+          created.issue.identifier,
+          "--json",
+        ],
+        { encoding: "utf8" },
+      ),
+    ) as typeof detail;
+    expect(fromCli.subissues).toEqual(detail.subissues);
+    expect(fromCli.relations).toEqual(detail.relations);
+    const boot = (await (await fetch(`${baseUrl}/api/bootstrap`)).json()) as {
+      issues: Array<{ id: number } & typeof detail>;
+    };
+    expect(
+      boot.issues.find((i) => i.id === created.issue.id)?.relations,
+    ).toEqual(detail.relations);
+  });
 
   it("enforces the same revision and field contract for legacy PUT", async () => {
     const route = "/api/issues/PRO-93";

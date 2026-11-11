@@ -537,12 +537,30 @@ export function issueRow(
   );
   output.relations = rows(
     database,
-    "SELECT r.id,r.relation_type,r.url,i.identifier AS related_identifier,i.title AS related_title FROM issue_relations r LEFT JOIN issues i ON i.id=r.related_issue_id WHERE r.issue_id=?",
+    `SELECT r.id,r.relation_type,r.url,i.id AS related_id,
+    i.identifier AS related_identifier,i.title AS related_title,
+    i.status_id AS related_status_id,s.name AS related_status,
+    s.category AS related_status_category,s.color AS related_status_color,
+    i.revision AS related_revision,i.archived AS related_archived,
+    i.assignee_id AS related_assignee_id,
+    CASE WHEN a.kind='agent' THEN a.name||' (Agent)' ELSE a.name END AS related_assignee,
+    a.kind AS related_assignee_kind
+    FROM issue_relations r LEFT JOIN issues i ON i.id=r.related_issue_id
+    LEFT JOIN issue_statuses s ON s.id=i.status_id
+    LEFT JOIN actors a ON a.id=i.assignee_id
+    WHERE r.issue_id=? ORDER BY r.id`,
     issueId,
   );
   output.subissues = rows(
     database,
-    "SELECT id,identifier,title,status_id FROM issues WHERE parent_id=? AND archived=0",
+    `SELECT i.id,i.identifier,i.title,i.status_id,s.name AS status,
+    s.category AS status_category,s.color AS status_color,
+    i.revision,i.assignee_id,
+    CASE WHEN a.kind='agent' THEN a.name||' (Agent)' ELSE a.name END AS assignee,
+    a.kind AS assignee_kind
+    FROM issues i JOIN issue_statuses s ON s.id=i.status_id
+    LEFT JOIN actors a ON a.id=i.assignee_id
+    WHERE i.parent_id=? AND i.archived=0 ORDER BY i.number,i.id`,
     issueId,
   );
   output.status_changed_at = result.created_at;
